@@ -4,6 +4,7 @@ import { Head } from "@inertiajs/react";
 import Modal from "@/Components/Modal";
 import ConfirmDialog from "@/Components/ConfirmDialog";
 import RowActions from "@/Components/RowActions";
+import { ClampText } from "@/Components/Cms";
 import VideoPreviewModal from "@/Components/VideoPreviewModal";
 import { FaPlusCircle, FaPlayCircle } from "react-icons/fa";
 import axios from "axios";
@@ -245,7 +246,7 @@ const AreaCategory = () => {
                                             <th>
                                                 Area Name
                                             </th>
-                                            <th>
+                                            <th className="w-[22rem]">
                                                 Description
                                             </th>
                                             <th>
@@ -270,9 +271,12 @@ const AreaCategory = () => {
                                                     <td className="border border-gray-200 px-4 py-2 text-sm w-72">
                                                         {record.areaName}
                                                     </td>
-                                                    <td className="border border-gray-200 px-4 py-2 text-start text-sm leading-loose max-w-xl">
-                                                        {record.areaDescription?.trim() ||
-                                                            "-"}
+                                                    <td className="border border-gray-200 px-4 py-2 text-start text-sm leading-relaxed max-w-xl">
+                                                        <ClampText
+                                                            value={
+                                                                record.areaDescription
+                                                            }
+                                                        />
                                                     </td>
                                                     <td className="border border-gray-200 px-4 py-2 text-sm">
                                                         {record.areaVideo?.trim() ? (
@@ -366,8 +370,11 @@ const AreaCategory = () => {
                                                     <span className="font-semibold">
                                                         Description:
                                                     </span>{" "}
-                                                    {item.areaDescription?.trim() ||
-                                                        "-"}
+                                                    <ClampText
+                                                        value={
+                                                            item.areaDescription
+                                                        }
+                                                    />
                                                 </p>
                                                 <p className="text-sm">
                                                     <span className="font-semibold">

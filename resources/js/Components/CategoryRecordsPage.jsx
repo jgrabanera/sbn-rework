@@ -900,8 +900,14 @@ const CategoryRecordsPage = ({
                 busy={deleting}
                 title="Delete record"
                 message={
-                    deleteConfig?.confirmMessage?.(pendingDelete) ??
-                    `This ${emptyLabel} will be permanently deleted.`
+                    // The optional call `confirmMessage?.(record)` guards the
+                    // function, not the argument, so it must not run before a
+                    // record is staged or page configs reading `record.x`
+                    // throw on null.
+                    pendingDelete
+                        ? (deleteConfig?.confirmMessage?.(pendingDelete) ??
+                          `This ${emptyLabel} will be permanently deleted.`)
+                        : `This ${emptyLabel} will be permanently deleted.`
                 }
                 confirmLabel="Delete"
                 onConfirm={confirmDelete}

@@ -1,133 +1,136 @@
-import React from "react";
+import React, { useState } from "react";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
 import CategoryRecordsPage from "@/Components/CategoryRecordsPage";
+import PdfModal from "@/Components/PdfModal";
+import { FaFilePdf } from "react-icons/fa";
+import { resolveStoredUrl } from "@/Utils/storage";
 
-const resolvePdfUrl = (value) => {
-    const path = String(value ?? "").trim();
+const resolvePdfUrl = (value) => resolveStoredUrl(value, "pdf");
 
-    if (!path) {
-        return "";
-    }
+const ResearchesCategory = () => {
+    const [preview, setPreview] = useState(null);
 
-    if (path.startsWith("http://") || path.startsWith("https://")) {
-        return path;
-    }
+    // Clicking the button previews the file in a modal rather than leaving
+    // the page. The filename is kept in the button's tooltip.
+    const renderPreviewButton = (value) =>
+        value ? (
+            <button
+                type="button"
+                onClick={() => setPreview(value)}
+                className="btn-secondary h-9"
+                title={String(value).split("/").pop()}
+            >
+                <FaFilePdf />
+                Preview PDF
+            </button>
+        ) : (
+            <span className="text-slate-400">No file</span>
+        );
 
-    if (path.startsWith("/storage/")) {
-        return path;
-    }
+    return (
+        <>
+            <CategoryRecordsPage
+                title="Researches Category"
+                description="Browse research files and titles linked to each protected area."
+                endpoint="/loadResearchItems"
+                createConfig={{
+                    buttonLabel: "Add Research",
+                    modalTitle: "New Research Content",
+                    submitLabel: "Save",
+                    storeEndpoint: "/storeResearchItem",
+                    fields: [
+                        {
+                            name: "area_id",
+                            label: "Area",
+                            type: "select",
+                            fullWidth: false,
+                        },
+                        {
+                            name: "pdf_title",
+                            label: "PDF Title",
+                            type: "text",
+                        },
+                        {
+                            name: "pdf",
+                            label: "PDF File",
+                            type: "file",
+                            accept: ".pdf,application/pdf",
+                            fullWidth: false,
+                        },
+                    ],
+                }}
+                editConfig={{
+                    modalTitle: "Edit Research Content",
+                    updateEndpoint: (id) => `/updateResearchItem/${id}`,
+                    fields: [
+                        {
+                            name: "area_id",
+                            label: "Area",
+                            type: "select",
+                            fullWidth: false,
+                        },
+                        {
+                            name: "pdf_title",
+                            label: "PDF Title",
+                            type: "text",
+                        },
+                        {
+                            name: "pdf",
+                            label: "PDF File",
+                            type: "file",
+                            accept: ".pdf,application/pdf",
+                            fullWidth: false,
+                        },
+                    ],
+                }}
+                deleteConfig={{
+                    deleteEndpoint: (id) => `/deleteResearchItem/${id}`,
+                    confirmMessage: (record) =>
+                        `Delete "${record.pdf_title?.trim() || "this research"}" from ${record.areaName ?? "the selected area"}?`,
+                }}
+                searchPlaceholder="Search by area, PDF title, or file..."
+                emptyLabel="research record"
+                columns={[
+                    {
+                        header: "Area Name",
+                        render: (record) => record.areaName ?? "-",
+                    },
+                    {
+                        header: "PDF Title",
+                        cellClassName: "text-start max-w-xl",
+                        render: (record) => record.pdf_title?.trim() || "-",
+                    },
+                    {
+                        header: "PDF File",
+                        cellClassName: "break-all",
+                        render: (record) => renderPreviewButton(record.pdf_url),
+                    },
+                ]}
+                mobileFields={[
+                    {
+                        label: "Area",
+                        render: (record) => record.areaName ?? "-",
+                    },
+                    {
+                        label: "PDF Title",
+                        render: (record) => record.pdf_title?.trim() || "-",
+                    },
+                    {
+                        label: "PDF File",
+                        render: (record) => renderPreviewButton(record.pdf_url),
+                    },
+                ]}
+            />
 
-    return `/storage/pdf/${path}`;
-};
-
-const renderPdfLink = (value) =>
-    value ? (
-        <a
-            href={resolvePdfUrl(value)}
-            target="_blank"
-            rel="noreferrer"
-            className="text-blue-600 hover:underline break-all"
-        >
-            {String(value).split("/").pop()}
-        </a>
-    ) : (
-        "-"
+            <PdfModal
+                open={Boolean(preview)}
+                title={preview ? String(preview).split("/").pop() : ""}
+                url={resolvePdfUrl(preview)}
+                onClose={() => setPreview(null)}
+            />
+        </>
     );
-
-const ResearchesCategory = () => (
-    <CategoryRecordsPage
-        title="Researches Category"
-        description="Browse research files and titles linked to each protected area."
-        endpoint="/loadResearchItems"
-        createConfig={{
-            buttonLabel: "Add Research",
-            modalTitle: "New Research Content",
-            submitLabel: "Save",
-            storeEndpoint: "/storeResearchItem",
-            fields: [
-                {
-                    name: "area_id",
-                    label: "Area",
-                    type: "select",
-                    fullWidth: false,
-                },
-                {
-                    name: "pdf_title",
-                    label: "PDF Title",
-                    type: "text",
-                },
-                {
-                    name: "pdf",
-                    label: "PDF File",
-                    type: "file",
-                    accept: ".pdf,application/pdf",
-                    fullWidth: false,
-                },
-            ],
-        }}
-        editConfig={{
-            modalTitle: "Edit Research Content",
-            updateEndpoint: (id) => `/updateResearchItem/${id}`,
-            fields: [
-                {
-                    name: "area_id",
-                    label: "Area",
-                    type: "select",
-                    fullWidth: false,
-                },
-                {
-                    name: "pdf_title",
-                    label: "PDF Title",
-                    type: "text",
-                },
-                {
-                    name: "pdf",
-                    label: "PDF File",
-                    type: "file",
-                    accept: ".pdf,application/pdf",
-                    fullWidth: false,
-                },
-            ],
-        }}
-        deleteConfig={{
-            deleteEndpoint: (id) => `/deleteResearchItem/${id}`,
-            confirmMessage: (record) =>
-                `Delete "${record.pdf_title?.trim() || "this research"}" from ${record.areaName ?? "the selected area"}?`,
-        }}
-        searchPlaceholder="Search by area, PDF title, or file..."
-        emptyLabel="research record"
-        columns={[
-            {
-                header: "Area Name",
-                render: (record) => record.areaName ?? "-",
-            },
-            {
-                header: "PDF Title",
-                cellClassName: "text-start max-w-xl",
-                render: (record) => record.pdf_title?.trim() || "-",
-            },
-            {
-                header: "PDF File",
-                cellClassName: "break-all",
-                render: (record) => renderPdfLink(record.pdf_url),
-            },
-        ]}
-        mobileFields={[
-            {
-                label: "Area",
-                render: (record) => record.areaName ?? "-",
-            },
-            {
-                label: "PDF Title",
-                render: (record) => record.pdf_title?.trim() || "-",
-            },
-            {
-                label: "PDF File",
-                render: (record) => renderPdfLink(record.pdf_url),
-            },
-        ]}
-    />
-);
+};
 
 export default ResearchesCategory;
 ResearchesCategory.layout = (page) => (

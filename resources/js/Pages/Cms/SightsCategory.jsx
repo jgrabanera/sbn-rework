@@ -29,6 +29,7 @@ import {
     FontSize,
 } from "ckeditor5";
 import ConfirmDialog from "@/Components/ConfirmDialog";
+import { ClampText } from "@/Components/Cms";
 import RowActions from "@/Components/RowActions";
 import { FaPlusCircle } from "react-icons/fa";
 import axios from "axios";
@@ -328,7 +329,7 @@ const SightsCategory = () => {
                                             <th>
                                                 Site Name
                                             </th>
-                                            <th>
+                                            <th className="w-[22rem]">
                                                 Content
                                             </th>
                                             <th>
@@ -351,11 +352,13 @@ const SightsCategory = () => {
                                                         {record.site_name ??
                                                             "-"}
                                                     </td>
-                                                    <td className="border border-gray-200 px-4 py-2 text-start text-sm leading-loose max-w-xl">
-                                                        {record.content?.trim()
-                                                            ? `${record.content.slice(0, 180)}${record.content.length > 180 ? "..." : ""}`
-                                                            : "-"}
-                                                    </td>
+                                                    <td className="border border-gray-200 px-4 py-2 text-start text-sm leading-relaxed max-w-xl">
+                                                            <ClampText
+                                                                value={
+                                                                    record.content
+                                                                }
+                                                            />
+                                                        </td>
                                                     <td>
                                                         <RowActions
                                         variant="icon"
@@ -412,9 +415,7 @@ const SightsCategory = () => {
                                                     <span className="font-semibold">
                                                         Content:
                                                     </span>{" "}
-                                                    {item.content?.trim()
-                                                        ? `${item.content.slice(0, 160)}${item.content.length > 160 ? "..." : ""}`
-                                                        : "-"}
+                                                    <ClampText value={item.content} />
                                                 </p>
 
                                                 <RowActions

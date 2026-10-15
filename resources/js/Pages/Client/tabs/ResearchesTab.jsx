@@ -6,6 +6,7 @@ import { KioskEmpty, KioskError, KioskLoading } from "@/Components/KioskStates";
 import PdfCard from "@/Components/PdfCard";
 import PDFViewer from "@/Components/PDFViewer";
 import useKioskSection from "@/Hooks/useKioskSection";
+import { resolveStoredUrl } from "@/Utils/storage";
 
 pdfjs.GlobalWorkerOptions.workerSrc = `/pdf.worker.min.mjs`;
 
@@ -89,8 +90,10 @@ const ResearchesTab = ({ id }) => {
                             </h2>
 
                             {/* PDF */}
+                            {/* Stored filenames contain spaces/commas, so the
+                                path must be encoded before react-pdf fetches it. */}
                             <Document
-                                file={selectedPdf.pdf_url}
+                                file={resolveStoredUrl(selectedPdf.pdf_url)}
                                 onLoadSuccess={onDocumentLoadSuccess}
                                 className="flex justify-center"
                             >

@@ -10,6 +10,13 @@ export default {
         "./resources/js/**/*.{js,jsx}",
     ],
 
+    /*
+     * ClampText builds its class as `line-clamp-${lines}`, which the content
+     * scanner cannot see. Without this the class is silently dropped and the
+     * text is not clamped at all.
+     */
+    safelist: ["line-clamp-1", "line-clamp-2", "line-clamp-3", "line-clamp-4"],
+
     theme: {
         extend: {
             fontFamily: {

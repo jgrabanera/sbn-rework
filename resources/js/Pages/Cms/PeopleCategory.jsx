@@ -1,16 +1,7 @@
 import React from "react";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
+import { ClampText } from "@/Components/Cms";
 import CategoryRecordsPage from "@/Components/CategoryRecordsPage";
-
-const previewText = (value, limit = 140) => {
-    const text = String(value ?? "").trim();
-
-    if (!text) {
-        return "-";
-    }
-
-    return `${text.slice(0, limit)}${text.length > limit ? "..." : ""}`;
-};
 
 const PeopleCategory = () => (
     <CategoryRecordsPage
@@ -54,17 +45,17 @@ const PeopleCategory = () => (
             {
                 header: "Article 1",
                 cellClassName: "text-start max-w-xl",
-                render: (record) => previewText(record.article1),
+                render: (record) => <ClampText value={record.article1} />,
             },
             {
                 header: "Article 2",
                 cellClassName: "text-start max-w-xl",
-                render: (record) => previewText(record.article2),
+                render: (record) => <ClampText value={record.article2} />,
             },
             {
                 header: "Article 3",
                 cellClassName: "text-start max-w-xl",
-                render: (record) => previewText(record.article3),
+                render: (record) => <ClampText value={record.article3} />,
             },
         ]}
         mobileFields={[
@@ -74,15 +65,15 @@ const PeopleCategory = () => (
             },
             {
                 label: "Article 1",
-                render: (record) => previewText(record.article1, 120),
+                render: (record) => <ClampText value={record.article1} />,
             },
             {
                 label: "Article 2",
-                render: (record) => previewText(record.article2, 120),
+                render: (record) => <ClampText value={record.article2} />,
             },
             {
                 label: "Article 3",
-                render: (record) => previewText(record.article3, 120),
+                render: (record) => <ClampText value={record.article3} />,
             },
         ]}
     />

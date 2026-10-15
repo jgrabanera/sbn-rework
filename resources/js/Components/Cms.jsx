@@ -119,3 +119,59 @@ export const Pagination = ({ page, lastPage, hasPrev, hasNext, onChange }) => {
         </nav>
     );
 };
+
+/** Strip markup so rich-text previews and tooltips read as plain text. */
+const toPlainText = (value) =>
+    String(value ?? "")
+        .replace(/<[^>]*>/g, " ")
+        .replace(/&nbsp;/g, " ")
+        .replace(/&amp;/g, "&")
+        .replace(/&lt;/g, "<")
+        .replace(/&gt;/g, ">")
+        .replace(/\s+/g, " ")
+        .trim();
+
+/** Keep the hover tooltip readable; a 2000-char description is not a tooltip. */
+const TOOLTIP_LIMIT = 220;
+
+/**
+ * Long-text cell content, clamped to a fixed number of lines.
+ *
+ * Clamping by line count rather than by character count keeps row heights
+ * uniform and adapts to the column width instead of assuming a fixed
+ * character budget.
+ *
+ * The width cap is load-bearing, not cosmetic: `max-w-*` on a <td> is
+ * ignored under auto table layout, and `display:-webkit-box` reports a
+ * max-content width equal to the whole unwrapped string. Without an
+ * explicit width the column stretches to fit the entire description on one
+ * line, which makes the clamp a no-op and blows out the table. Setting the
+ * width on the clamped element constrains the column from inside.
+ */
+export const ClampText = ({
+    value,
+    lines = 2,
+    className = "",
+    widthClass = "max-w-[22rem]",
+    empty = "-",
+}) => {
+    const text = toPlainText(value);
+
+    if (!text) {
+        return <span className="text-slate-400">{empty}</span>;
+    }
+
+    const tooltip =
+        text.length > TOOLTIP_LIMIT
+            ? `${text.slice(0, TOOLTIP_LIMIT).trimEnd()}...`
+            : text;
+
+    return (
+        <span
+            className={`${widthClass} line-clamp-${lines} ${className}`}
+            title={tooltip}
+        >
+            {text}
+        </span>
+    );
+};

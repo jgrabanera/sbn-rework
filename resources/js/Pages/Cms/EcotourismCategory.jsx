@@ -1,16 +1,7 @@
 import React from "react";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
+import { ClampText } from "@/Components/Cms";
 import CategoryRecordsPage from "@/Components/CategoryRecordsPage";
-
-const previewText = (value, limit = 140) => {
-    const text = String(value ?? "").trim();
-
-    if (!text) {
-        return "-";
-    }
-
-    return `${text.slice(0, limit)}${text.length > limit ? "..." : ""}`;
-};
 
 const renderImage = (value, alt) =>
     value ? (
@@ -73,12 +64,12 @@ const EcotourismCategory = () => (
             {
                 header: "Article 1",
                 cellClassName: "text-start max-w-xl",
-                render: (record) => previewText(record.article1),
+                render: (record) => <ClampText value={record.article1} />,
             },
             {
                 header: "Article 2",
                 cellClassName: "text-start max-w-xl",
-                render: (record) => previewText(record.article2),
+                render: (record) => <ClampText value={record.article2} />,
             },
         ]}
         mobileFields={[
@@ -93,11 +84,11 @@ const EcotourismCategory = () => (
             },
             {
                 label: "Article 1",
-                render: (record) => previewText(record.article1, 120),
+                render: (record) => <ClampText value={record.article1} />,
             },
             {
                 label: "Article 2",
-                render: (record) => previewText(record.article2, 120),
+                render: (record) => <ClampText value={record.article2} />,
             },
         ]}
     />

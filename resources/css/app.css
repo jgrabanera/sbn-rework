@@ -1,0 +1,64 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@keyframes smallBounce {
+    0%,
+    100% {
+        transform: translateY(0);
+    }
+    50% {
+        transform: translateY(-4px);
+    }
+}
+
+h1 {
+    font-size: 2.25rem;
+    line-height: 2.5rem;
+}
+
+.small-bounce {
+    animation: smallBounce 2s ease-in-out infinite;
+}
+
+@font-face {
+    font-family: "Poppins";
+    src: url("./assets/fonts/Poppins-Regular.ttf") format("truetype");
+    font-weight: 400;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: "Poppins";
+    src: url("./assets/fonts/Poppins-Bold.ttf") format("truetype");
+    font-weight: 700;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: "PlaypenSans";
+    src: url("../assets/fonts/PlaypenSans-Bold.ttf") format("truetype");
+    font-weight: 700;
+    font-style: normal;
+}
+
+body {
+    font-family: "Poppins", sans-serif;
+    color: #141414;
+}
+
+.playpenSans {
+    font-family: "PlaypenSans";
+}
+
+.ck-editor__editable {
+    min-height: 300px;
+    max-height: 700px;
+    overflow-y: auto;
+}
+
+.ck-content::after {
+    content: "";
+    display: block;
+    clear: both;
+}

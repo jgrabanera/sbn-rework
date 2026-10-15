@@ -1,0 +1,172 @@
+import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
+import { Head, Link } from "@inertiajs/react";
+import Lottie from "lottie-react";
+import { useEffect, useState } from "react";
+import { adminSectionList } from "@/components/adminSections";
+
+import area from "../../../assets/lottiefiles/area.json";
+import leaf from "../../../assets/lottiefiles/leaf.json";
+import mountain from "../../../assets/lottiefiles/mountain.json";
+import wildlife from "../../../assets/lottiefiles/wildlife.json";
+import ecotour from "../../../assets/lottiefiles/ecotourism.json";
+import conservation from "../../../assets/lottiefiles/conservation.json";
+import people from "../../../assets/lottiefiles/people.json";
+import alert from "../../../assets/lottiefiles/threats.json";
+import research from "../../../assets/lottiefiles/research.json";
+import management from "../../../assets/lottiefiles/management.json";
+
+const cardAnimations = {
+    area,
+    about: leaf,
+    sights: mountain,
+    wildlife,
+    ecotourism: ecotour,
+    conservation,
+    people,
+    threats: alert,
+    researches: research,
+    management,
+    dosanddonts: management,
+    quiz: research,
+};
+
+function DashboardCard({ section, count }) {
+    return (
+        <Link href={section.route} className="group block h-full">
+            <article className="flex h-full flex-col rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-xl">
+                <div className="flex items-start justify-between gap-4">
+                    <div>
+                        <p className="text-xs font-semibold uppercase tracking-[0.24em] text-teal-600">
+                            CMS Section
+                        </p>
+                        <h2 className="mt-2 text-xl font-semibold text-slate-900">
+                            {section.title}
+                        </h2>
+                    </div>
+                    <div className="rounded-xl bg-emerald-50 px-3 py-1 text-sm font-semibold text-emerald-700">
+                        {count}
+                    </div>
+                </div>
+
+                <div className="mt-2 flex justify-center">
+                    <Lottie
+                        animationData={cardAnimations[section.key]}
+                        loop={true}
+                        autoplay={true}
+                        style={{ width: 140, height: 140 }}
+                    />
+                </div>
+
+                <p className="mt-auto text-sm leading-6 text-slate-600">
+                    {section.description}
+                </p>
+            </article>
+        </Link>
+    );
+}
+
+export default function Dashboard() {
+    const [summary, setSummary] = useState({
+        sections: [],
+        totals: { sections: adminSectionList.length, records: 0 },
+    });
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        let active = true;
+
+        const loadSummary = async () => {
+            try {
+                const response = await axios.get("/admin/summary");
+
+                if (active) {
+                    setSummary(response.data);
+                }
+            } catch (error) {
+                if (active) {
+                    setSummary({
+                        sections: adminSectionList.map((section) => ({
+                            ...section,
+                            count: 0,
+                        })),
+                        totals: {
+                            sections: adminSectionList.length,
+                            records: 0,
+                        },
+                    });
+                }
+            } finally {
+                if (active) {
+                    setLoading(false);
+                }
+            }
+        };
+
+        loadSummary();
+
+        return () => {
+            active = false;
+        };
+    }, []);
+
+    const sections = summary.sections.length
+        ? summary.sections
+        : adminSectionList.map((section) => ({ ...section, count: 0 }));
+
+    return (
+        <>
+            <Head title="Dashboard" />
+
+            <div className="max-h-screen bg-slate-100">
+                <div className="mx-auto w-full max-w-full px-4 py-6 md:px-8">
+                    <section className="rounded-xl bg-gradient-to-r from-teal-800 via-teal-700 to-emerald-600 p-6 text-white shadow-xl">
+                        <p className="text-xs font-semibold uppercase tracking-[0.28em] text-emerald-100">
+                            Admin Control Center
+                        </p>
+
+                        <div className="mt-6 grid gap-4 md:grid-cols-3">
+                            <div className="rounded-xl bg-white/10 py-2 px-4 backdrop-blur-sm">
+                                <p className="text-sm text-emerald-50/80">
+                                    Sections
+                                </p>
+                                <p className="mt-2 text-3xl font-semibold">
+                                    {summary.totals.sections}
+                                </p>
+                            </div>
+                            <div className="rounded-xl bg-white/10 py-2 px-4 backdrop-blur-sm">
+                                <p className="text-sm text-emerald-50/80">
+                                    Tracked records
+                                </p>
+                                <p className="mt-2 text-3xl font-semibold">
+                                    {loading ? "..." : summary.totals.records}
+                                </p>
+                            </div>
+                            <div className="rounded-xl bg-white/10 py-2 px-4 backdrop-blur-sm">
+                                <p className="text-sm text-emerald-50/80">
+                                    Admin entry
+                                </p>
+                                <p className="mt-2 text-lg font-semibold">
+                                    /admin
+                                </p>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section className="mt-6 grid gap-4 md:grid-cols-4 lg:grid-cols-5">
+                        {sections.map((section) => (
+                            <DashboardCard
+                                key={section.key}
+                                section={section}
+                                count={section.count ?? 0}
+                            />
+                        ))}
+                    </section>
+                </div>
+            </div>
+        </>
+    );
+}
+
+Dashboard.layout = (page) => (
+    <AuthenticatedLayout user={page.props.auth.user} children={page} />
+);

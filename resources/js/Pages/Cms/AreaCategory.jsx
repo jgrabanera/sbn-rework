@@ -4,7 +4,8 @@ import { Head } from "@inertiajs/react";
 import Modal from "@/Components/Modal";
 import ConfirmDialog from "@/Components/ConfirmDialog";
 import RowActions from "@/Components/RowActions";
-import { FaPlusCircle } from "react-icons/fa";
+import VideoPreviewModal from "@/Components/VideoPreviewModal";
+import { FaPlusCircle, FaPlayCircle } from "react-icons/fa";
 import axios from "axios";
 
 const emptyForm = {
@@ -29,8 +30,14 @@ const AreaCategory = () => {
     const [submitting, setSubmitting] = useState(false);
     const [editingRecord, setEditingRecord] = useState(null);
     const [pendingDelete, setPendingDelete] = useState(null);
+    const [videoRecord, setVideoRecord] = useState(null);
     const [form, setForm] = useState(emptyForm);
     const [errors, setErrors] = useState({});
+
+    // `areaVideo` is stored as a bare filename on the public videos disk.
+    const videoSrc = videoRecord?.areaVideo
+        ? `/storage/videos/${videoRecord.areaVideo}`
+        : null;
 
     const loadProtectedArea = async (page = 1, keyword = search) => {
         setLoading(true);
@@ -267,9 +274,33 @@ const AreaCategory = () => {
                                                         {record.areaDescription?.trim() ||
                                                             "-"}
                                                     </td>
-                                                    <td className="border border-gray-200 px-4 py-2 text-sm break-all">
-                                                        {record.areaVideo?.trim() ||
-                                                            "-"}
+                                                    <td className="border border-gray-200 px-4 py-2 text-sm">
+                                                        {record.areaVideo?.trim() ? (
+                                                            <button
+                                                                type="button"
+                                                                onClick={() =>
+                                                                    setVideoRecord(
+                                                                        record,
+                                                                    )
+                                                                }
+                                                                className="btn-secondary h-9 max-w-[16rem] justify-start px-3"
+                                                                aria-label={`Preview video for ${record.areaName}`}
+                                                                title={record.areaVideo}
+                                                            >
+                                                                <FaPlayCircle
+                                                                    size={18}
+                                                                />
+                                                                <span className="truncate">
+                                                                    {
+                                                                        record.areaVideo
+                                                                    }
+                                                                </span>
+                                                            </button>
+                                                        ) : (
+                                                            <span className="text-slate-400">
+                                                                No video
+                                                            </span>
+                                                        )}
                                                     </td>
                                                     <td>
                                                         {record.imagePath ? (
@@ -338,12 +369,36 @@ const AreaCategory = () => {
                                                     {item.areaDescription?.trim() ||
                                                         "-"}
                                                 </p>
-                                                <p className="text-sm break-all">
+                                                <p className="text-sm">
                                                     <span className="font-semibold">
                                                         Video:
                                                     </span>{" "}
-                                                    {item.areaVideo?.trim() ||
-                                                        "-"}
+                                                    {item.areaVideo?.trim() ? (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() =>
+                                                                setVideoRecord(
+                                                                    item,
+                                                                )
+                                                            }
+                                                            className="btn-secondary mt-1 h-8 max-w-full justify-start px-3"
+                                                            aria-label={`Preview video for ${item.areaName}`}
+                                                            title={item.areaVideo}
+                                                        >
+                                                            <FaPlayCircle
+                                                                size={14}
+                                                            />
+                                                            <span className="truncate">
+                                                                {
+                                                                    item.areaVideo
+                                                                }
+                                                            </span>
+                                                        </button>
+                                                    ) : (
+                                                        <span className="text-slate-400">
+                                                            No video
+                                                        </span>
+                                                    )}
                                                 </p>
 
                                                 <div className="my-3">
@@ -565,12 +620,19 @@ const AreaCategory = () => {
                 </form>
             </Modal>
 
+            <VideoPreviewModal
+                open={Boolean(videoRecord)}
+                title={videoRecord?.areaName ?? "Video preview"}
+                src={videoSrc}
+                onClose={() => setVideoRecord(null)}
+            />
+
             <ConfirmDialog
                 open={Boolean(pendingDelete)}
                 title="Delete protected area"
                 message={
                     pendingDelete
-                        ? `Delete "${record.areaName}" from protected areas?`
+                        ? `Delete "${pendingDelete.areaName}" from protected areas?`
                         : null
                 }
                 confirmLabel="Delete"

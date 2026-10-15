@@ -603,7 +603,7 @@ const SightsCategory = () => {
                 title="Delete sight"
                 message={
                     pendingDelete
-                        ? `Delete "${record.areaName} / ${record.site_name}"?`
+                        ? `Delete "${pendingDelete.areaName} / ${pendingDelete.site_name}"?`
                         : null
                 }
                 confirmLabel="Delete"

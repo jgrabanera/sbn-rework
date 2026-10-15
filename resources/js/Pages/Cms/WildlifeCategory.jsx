@@ -773,7 +773,7 @@ const WildlifeCategory = () => {
                 title="Delete wildlife item"
                 message={
                     pendingDelete
-                        ? `Delete "${record.areaName} / ${record.tab_name}"?`
+                        ? `Delete "${pendingDelete.areaName} / ${pendingDelete.tab_name}"?`
                         : null
                 }
                 confirmLabel="Delete"

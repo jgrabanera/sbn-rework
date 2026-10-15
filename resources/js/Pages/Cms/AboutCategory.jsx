@@ -719,7 +719,7 @@ const AboutCategory = () => {
                 title="Delete content"
                 message={
                     pendingDelete
-                        ? `Delete "${record.areaName} / ${tabLabels[record.tabID] ?? `Tab ${record.tabID}`}"?`
+                        ? `Delete "${pendingDelete.areaName} / ${tabLabels[pendingDelete.tabID] ?? `Tab ${pendingDelete.tabID}`}"?`
                         : null
                 }
                 confirmLabel="Delete"

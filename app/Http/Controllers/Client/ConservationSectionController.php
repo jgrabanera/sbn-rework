@@ -8,10 +8,16 @@ use Illuminate\Http\Request;
 
 class ConservationSectionController extends Controller
 {
-    //
-    public function getData()
+    public function getData(Request $request)
     {
-        $data = Conservation::all();
+        $areaId = $request->integer('area');
+
+        if (! $areaId) {
+            return response()->json([]);
+        }
+
+        $data = Conservation::where('area_id', $areaId)->get();
+
         return response()->json($data);
     }
 }

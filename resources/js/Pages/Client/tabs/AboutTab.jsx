@@ -1,35 +1,25 @@
 import CKEditorDisplayer from "@/Components/CKEditorDisplayer";
-import axios from "axios";
-import { useState, useMemo, useEffect } from "react";
+import { KioskError, KioskLoading } from "@/Components/KioskStates";
+import useKioskSection from "@/Hooks/useKioskSection";
+import { useMemo, useState } from "react";
 import { FaInfoCircle, FaHistory, FaRoute } from "react-icons/fa";
 
 const AboutTab = ({ area }) => {
     // Tabs: ABOUT, HISTORY, HOW TO GET THERE
     const [activeTab, setActiveTab] = useState("tab1");
-    const [ContentAbout, setContentAbout] = useState([]);
-    const [loading, setLoading] = useState(false);
-    const [errors, setErrors] = useState({});
 
-    const loadContentAbout = async () => {
-        try {
-            setLoading(true);
-            const res = await axios.get(`/get-about-section`);
-            setContentAbout(res.data);
-        } catch (requestError) {
-            setErrors(requestError?.response?.data?.errors || {});
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    useEffect(() => {
-        loadContentAbout();
-    }, []);
+    const { data, loading, error, retry } = useKioskSection(
+        `/get-about-section?area=${area}`,
+        { enabled: Boolean(area) },
+    );
 
     const baseBtnClasses =
         "w-full sm:w-auto px-4 py-2 flex items-center justify-center gap-2 text-center font-semibold text-sm rounded-lg transition-all duration-300";
 
-    const safeContentAbout = Array.isArray(ContentAbout) ? ContentAbout : [];
+    const safeContentAbout = useMemo(
+        () => (Array.isArray(data) ? data : []),
+        [data],
+    );
 
     const tabKeyToId = {
         tab1: 1, // ABOUT
@@ -43,14 +33,10 @@ const AboutTab = ({ area }) => {
     const current = useMemo(
         () =>
             safeContentAbout.find(
-                (item) =>
-                    String(item.areaID) === String(area) &&
-                    String(item.tabID) === String(currentTabId),
+                (item) => String(item.tabID) === String(currentTabId),
             ),
-        [safeContentAbout, area, currentTabId],
+        [safeContentAbout, currentTabId],
     );
-
-    // console.log(`current:`, safeContentAbout);
 
     const image1Url =
         current?.imagePath1 && String(current.imagePath1).trim()
@@ -70,7 +56,7 @@ const AboutTab = ({ area }) => {
                     className={`${baseBtnClasses} ${
                         activeTab === "tab1"
                             ? "bg-blue-600 text-white shadow-md"
-                            : "bg-blue-100 text-gray-900 hover:bg-gray-200"
+                            : "bg-blue-100 text-gray-900 hover:bg-blue-200"
                     }`}
                     onClick={() => setActiveTab("tab1")}
                 >
@@ -83,7 +69,7 @@ const AboutTab = ({ area }) => {
                     className={`${baseBtnClasses} ${
                         activeTab === "tab2"
                             ? "bg-blue-600 text-white shadow-md"
-                            : "bg-blue-100 text-gray-900 hover:bg-gray-200"
+                            : "bg-blue-100 text-gray-900 hover:bg-blue-200"
                     }`}
                     onClick={() => setActiveTab("tab2")}
                 >
@@ -96,7 +82,7 @@ const AboutTab = ({ area }) => {
                     className={`${baseBtnClasses} ${
                         activeTab === "tab3"
                             ? "bg-blue-600 text-white shadow-md"
-                            : "bg-blue-100 text-gray-900 hover:bg-gray-200"
+                            : "bg-blue-100 text-gray-900 hover:bg-blue-200"
                     }`}
                     onClick={() => setActiveTab("tab3")}
                 >
@@ -107,23 +93,19 @@ const AboutTab = ({ area }) => {
 
             {/* Tab Content */}
             <div className="mt-4">
-                {loading && (
-                    <div className="text-sm text-gray-500">Loading...</div>
+                {loading && <KioskLoading />}
+
+                {!loading && error && (
+                    <KioskError message={error} onRetry={retry} />
                 )}
 
-                {!loading && Object.keys(errors || {}).length > 0 && (
-                    <div className="text-sm text-red-600">
-                        Failed to load content.
-                    </div>
-                )}
-
-                {!current && (
+                {!loading && !error && !current && (
                     <div className="text-sm text-gray-500">
                         No content available for this tab.
                     </div>
                 )}
 
-                {current && (
+                {!loading && !error && current && (
                     <div className="w-full flex flex-col md:flex-row gap-4 items-stretch">
                         {/* Image 1 */}
                         <div className="flex-1 flex flex-col bg-white rounded-lg shadow-lg/20 p-4 ">

@@ -2,40 +2,20 @@ import SBNLogo from "../../../assets/images/starbooks-nature-logo.png";
 
 import { useState, useRef, useEffect } from "react";
 
-// import { Link } from "react-router-dom";
-// import { useAppContext } from "../contexts/AppContext";
 import ClientModal from "@/Components/ClientModal";
 import MainLayout from "@/Layouts/MainLayout";
 import { Head, Link } from "@inertiajs/react";
 import ClientFooter from "@/Components/ClientFooter";
-import axios from "axios";
+import { KioskEmpty, KioskError, KioskLoading } from "@/Components/KioskStates";
+import useKioskSection from "@/Hooks/useKioskSection";
 
 const Home = () => {
-    // const { areas } = useAppContext();
-    const [areas, setAreas] = useState([]);
-    const [errors, setErrors] = useState({});
-    const [loading, setLoading] = useState(false);
+    const { data, loading, error, retry } = useKioskSection("/get-areas");
+
+    const areas = Array.isArray(data) ? data : [];
 
     const [isOpen, setIsOpen] = useState(false);
     const [selectedArea, setSelectedArea] = useState(null);
-
-    const loadAreas = async () => {
-        try {
-            setLoading(true);
-            const res = await axios.get(`/get-areas`);
-            setAreas(res.data);
-            // console.log("Loaded areas:", res.data);
-        } catch (requestError) {
-            console.log("Error loading areas:", requestError);
-            setErrors(requestError?.response?.data?.errors || {});
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    useEffect(() => {
-        loadAreas();
-    }, []);
 
     const handleClose = () => {
         setIsOpen(false);
@@ -70,10 +50,22 @@ const Home = () => {
 
                 {/* Content */}
                 <div className=" my-5 grid grid-cols-1 md:flex md:justify-evenly gap-12 w-full max-w-10/12 mx-auto px-4">
-                    {areas?.length > 0 ? (
-                        areas.map((area, index) => (
-                            <div
-                                key={index}
+                    {loading && <KioskLoading label="Loading protected areas..." />}
+
+                    {!loading && error && (
+                        <KioskError message={error} onRetry={retry} />
+                    )}
+
+                    {!loading && !error && areas.length === 0 && (
+                        <KioskEmpty message="No Records Found." />
+                    )}
+
+                    {!loading &&
+                        !error &&
+                        areas.map((area) => (
+                            <button
+                                key={area.id}
+                                type="button"
                                 onClick={() => {
                                     setSelectedArea(area);
                                     setIsOpen(true);
@@ -82,7 +74,7 @@ const Home = () => {
                             >
                                 <img
                                     src={`/storage/images/${area.imagePath}`}
-                                    alt={`/storage/images/${area.imagePath}`}
+                                    alt={area.areaName ?? "Protected area"}
                                     className="w-full max-w-xs sm:max-w-sm md:max-w-96 object-contain rounded-full small-bounce"
                                 />
 
@@ -91,11 +83,8 @@ const Home = () => {
                                         {area.areaName ?? ""}
                                     </p>
                                 </div>
-                            </div>
-                        ))
-                    ) : (
-                        <div className="text-center">No Records Found.</div>
-                    )}
+                            </button>
+                        ))}
                 </div>
 
                 <ClientFooter />

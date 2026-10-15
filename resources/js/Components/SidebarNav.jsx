@@ -38,14 +38,14 @@ const SidebarNav = ({ id }) => {
                 <Link href={`/protected-area/${id}`}>
                     <img
                         src={backIcon}
-                        className="w-10 transition-transform duration-300 hover:scale-115"
+                        className="w-10 transition-transform duration-300 hover:scale-110"
                     />
                 </Link>
                 <Link href="/">
                     {" "}
                     <img
                         src={homeIcon}
-                        className="w-10 transition-transform duration-300 hover:scale-115"
+                        className="w-10 transition-transform duration-300 hover:scale-110"
                     />
                 </Link>
                 <Link href="/quiz">
@@ -61,14 +61,14 @@ const SidebarNav = ({ id }) => {
                     <img
                         src={feedbackIcon}
                         alt="Review Icon"
-                        className="w-10 transition-transform duration-300 hover:scale-115"
+                        className="w-10 transition-transform duration-300 hover:scale-110"
                     />
                 </button>
                 <button type="button" onClick={() => setPartnersOpen(true)}>
                     <img
                         src={partnerIcon}
                         alt="Partners Icon"
-                        className="w-10 transition-transform duration-300 hover:scale-115"
+                        className="w-10 transition-transform duration-300 hover:scale-110"
                     />
                 </button>
                 <button type="button" onClick={() => setContactOpen(true)}>

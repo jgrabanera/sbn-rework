@@ -4,20 +4,17 @@ import SidebarNav from "@/Components/SidebarNav";
 import BottomHNav from "@/Components/BottomHNav";
 import CategoryNav from "@/Components/CategoryNav";
 import IdleAttractScreen from "@/Components/IdleAttractScreen";
-import { useEffect, useState } from "react";
+import { FaRedo } from "react-icons/fa";
+import useKioskSection from "@/Hooks/useKioskSection";
 
 const CategoryLayout = ({ area, section, areaCategory, children }) => {
-    const [data, setData] = useState([]);
-
-    const getData = async () => {
-        const params = `area=${area?.id}`;
-        const res = await axios.get(`/get-protected-area-section?${params}`);
-        setData(res.data);
-    };
-
-    useEffect(() => {
-        getData();
-    }, []);
+    const {
+        data,
+        error,
+        retry,
+    } = useKioskSection(`/get-protected-area-section?area=${area?.id}`, {
+        enabled: Boolean(area?.id),
+    });
 
     return (
         <div
@@ -30,12 +27,7 @@ const CategoryLayout = ({ area, section, areaCategory, children }) => {
                     <Header />
                     {area && (
                         <div className=" h-full mb-2 max-h-[10vh] ">
-                            <h1
-                                className=" md:text-4xl text-2xl font-bold text-center mb-2 text-white playpenSans text-shadow-lg/50"
-                                style={{
-                                    textShadow: `-1px -1px 0 #000,1px -1px 0 #000,-1px  1px 0 #000,1px  1px 0 #000`,
-                                }}
-                            >
+                            <h1 className=" md:text-4xl text-2xl font-bold text-center mb-2 text-white playpenSans text-shadow-lg/50">
                                 {area.areaName}
                             </h1>
                         </div>
@@ -65,6 +57,24 @@ const CategoryLayout = ({ area, section, areaCategory, children }) => {
                             section={section}
                             areaCategory={data}
                         />
+
+                        {/* Without this the desktop visitor has no way to
+                            change section, so surface a retry instead. */}
+                        {error && (
+                            <div
+                                role="alert"
+                                className="flex justify-center pt-2"
+                            >
+                                <button
+                                    type="button"
+                                    onClick={retry}
+                                    className="inline-flex items-center gap-2 rounded-full bg-white px-5 py-2 text-sm font-semibold text-gray-900 shadow-md transition hover:bg-gray-100"
+                                >
+                                    <FaRedo aria-hidden="true" />
+                                    Reload navigation
+                                </button>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>

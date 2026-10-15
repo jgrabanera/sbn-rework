@@ -8,10 +8,16 @@ use Illuminate\Http\Request;
 
 class EcotourismSectionController extends Controller
 {
-
-    public function getData()
+    public function getData(Request $request)
     {
-        $data = Ecotourism::all();
+        $areaId = $request->integer('area');
+
+        if (! $areaId) {
+            return response()->json([]);
+        }
+
+        $data = Ecotourism::where('area_id', $areaId)->get();
+
         return response()->json($data);
     }
 }

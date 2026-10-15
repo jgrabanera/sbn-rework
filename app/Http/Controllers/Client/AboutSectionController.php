@@ -10,6 +10,12 @@ class AboutSectionController extends Controller
 {
     public function getData(Request $request)
     {
-        return ContentAbout::orderBy('id', 'asc')->get();
+        $areaId = $request->integer('area');
+
+        if (! $areaId) {
+            return response()->json([]);
+        }
+
+        return ContentAbout::where('areaID', $areaId)->orderBy('id', 'asc')->get();
     }
 }

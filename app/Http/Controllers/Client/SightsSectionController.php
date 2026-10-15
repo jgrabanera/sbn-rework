@@ -8,9 +8,14 @@ use Illuminate\Http\Request;
 
 class SightsSectionController extends Controller
 {
-    //
-    public function getData()
+    public function getData(Request $request)
     {
-        return Sites::orderBy('id', 'asc')->get();
+        $areaId = $request->integer('area');
+
+        if (! $areaId) {
+            return response()->json([]);
+        }
+
+        return Sites::where('area_id', $areaId)->orderBy('id', 'asc')->get();
     }
 }

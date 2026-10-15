@@ -1,64 +1,46 @@
-// import { useParams } from "react-router-dom";
 import CKEditorDisplayer from "@/Components/CKEditorDisplayer";
-import axios from "axios";
-import { useEffect, useMemo, useState } from "react";
+import { KioskEmpty, KioskError, KioskLoading } from "@/Components/KioskStates";
+import useKioskSection from "@/Hooks/useKioskSection";
+import { useMemo, useState } from "react";
 
 const WildlifeTab = ({ id }) => {
-    const [Wildlife, setWildlife] = useState([]);
-    // const [WildlifeItems, setWildlifeItems] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [errors, setErrors] = useState({});
+    // The endpoint is already scoped to this area, so the payload only
+    // contains the tabs that belong here.
+    const { data, loading, error, retry } = useKioskSection(
+        `/get-wildlife-section?area=${id}`,
+        { enabled: Boolean(id) },
+    );
 
-    const areaWildlife = useMemo(() => {
-        return Wildlife.filter((tab) => tab.area_id == Number(id));
-    }, [Wildlife, id]);
+    const [activeTabId, setActiveTabId] = useState(null);
+    const [activeItemId, setActiveItemId] = useState(null);
 
-    const [activeTab, setActiveTab] = useState(null);
-    const [activeItem, setActiveItem] = useState(null);
+    const tabs = useMemo(() => (Array.isArray(data) ? data : []), [data]);
 
-    const loadWildlife = async () => {
-        try {
-            setLoading(true);
-            const res = await axios.get(`/get-wildlife-section`);
-            setWildlife(res.data);
-        } catch (requestError) {
-            setErrors(requestError?.response?.data?.errors || {});
-        } finally {
-            setLoading(false);
-        }
-    };
+    // Derive rather than sync via effect: a null selection means "first one".
+    const activeTab =
+        tabs.find((tab) => tab.id === activeTabId) ?? tabs[0] ?? null;
 
-    useEffect(() => {
-        loadWildlife();
-    }, []);
+    const activeItem =
+        activeTab?.wildlife_items?.find((item) => item.id === activeItemId) ??
+        activeTab?.wildlife_items?.[0] ??
+        null;
 
-    // eslint-disable-next-line react-hooks/rules-of-hooks
-    useEffect(() => {
-        if (areaWildlife.length > 0) {
-            const firstTab = areaWildlife[0];
-            const firstItem = firstTab.wildlife_items?.[0] || null;
-
-            setActiveTab(firstTab);
-            setActiveItem(firstItem);
-        }
-    }, [areaWildlife]);
-
-    if (!areaWildlife.length) {
-        return (
-            <p className="text-white text-center">No wildlife data found.</p>
-        );
+    if (loading) return <KioskLoading />;
+    if (error) return <KioskError message={error} onRetry={retry} />;
+    if (!tabs.length) {
+        return <KioskEmpty message="No wildlife data found." />;
     }
 
     return (
         <div className="flex flex-col gap-2 w-full ">
             {/* TABS */}
             <div className="flex justify-start gap-4 w-full md:overflow-hidden overflow-x-scroll ">
-                {areaWildlife.map((tab) => (
+                {tabs.map((tab) => (
                     <button
                         key={tab.id}
                         onClick={() => {
-                            setActiveTab(tab);
-                            setActiveItem(tab.wildlife_items?.[0] || null);
+                            setActiveTabId(tab.id);
+                            setActiveItemId(null);
                         }}
                         className={`px-6 py-2 rounded-lg text-sm font-semibold
               ${
@@ -82,7 +64,10 @@ const WildlifeTab = ({ id }) => {
                                 <img
                                     key={item.id}
                                     src={`/storage/images/${item.thumbnail_url}`}
-                                    onClick={() => setActiveItem(item)}
+                                    alt={`${
+                                        activeTab?.tab_name || "Wildlife"
+                                    } thumbnail`}
+                                    onClick={() => setActiveItemId(item.id)}
                                     className={`object-cover rounded-lg cursor-pointer md:h-40 md:w-60 border-4 m-auto border-white
                   ${
                       activeItem?.id === item.id

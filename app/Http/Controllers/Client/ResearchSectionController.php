@@ -8,10 +8,16 @@ use Illuminate\Http\Request;
 
 class ResearchSectionController extends Controller
 {
-    //
-    public function getData()
+    public function getData(Request $request)
     {
-        $data = Researches::all();
+        $areaId = $request->integer('area');
+
+        if (! $areaId) {
+            return response()->json([]);
+        }
+
+        $data = Researches::where('area_id', $areaId)->get();
+
         return response()->json($data);
     }
 }

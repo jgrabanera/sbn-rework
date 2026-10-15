@@ -40,14 +40,14 @@ const BottomHNav = ({ id = null }) => {
                 <Link href={`/`}>
                     <img
                         src={backIcon}
-                        className="md:w-10 w-7 transition-transform duration-300 hover:scale-115"
+                        className="md:w-10 w-7 transition-transform duration-300 hover:scale-110"
                     />
                 </Link>
                 <Link href="/">
                     {" "}
                     <img
                         src={homeIcon}
-                        className="md:w-10 w-7 transition-transform duration-300 hover:scale-115"
+                        className="md:w-10 w-7 transition-transform duration-300 hover:scale-110"
                     />
                 </Link>
                 <Link href="/quiz">
@@ -62,14 +62,14 @@ const BottomHNav = ({ id = null }) => {
                     <img
                         src={feedbackIcon}
                         alt="Review Icon"
-                        className="md:w-10 w-7 transition-transform duration-300 hover:scale-115"
+                        className="md:w-10 w-7 transition-transform duration-300 hover:scale-110"
                     />
                 </button>
                 <button type="button" onClick={() => setPartnersOpen(true)}>
                     <img
                         src={partnerIcon}
                         alt="Partners Icon"
-                        className="md:w-10 w-7 transition-transform duration-300 hover:scale-115"
+                        className="md:w-10 w-7 transition-transform duration-300 hover:scale-110"
                     />
                 </button>
                 <button type="button" onClick={() => setContactOpen(true)}>

@@ -8,16 +8,19 @@ use Illuminate\Http\Request;
 
 class WildlifeSectionController extends Controller
 {
-    //
-    public function getData()
+    public function getData(Request $request)
     {
-        $data = WildlifeTabs::with('wildlifeItems.contents')->get();
+        $areaId = $request->integer('area');
+
+        if (! $areaId) {
+            return response()->json([]);
+        }
+
+        $data = WildlifeTabs::with('wildlifeItems.contents')
+            ->where('area_id', $areaId)
+            ->orderBy('id', 'asc')
+            ->get();
 
         return response()->json($data);
     }
 }
-
-
-
-
-

@@ -27,14 +27,19 @@ class ProtectedAreaController extends Controller
 
     public function getData(Request $request)
     {
-        //return $request;
+        $areaID = $request->integer('area');
 
-        $areaID = $request->area;
+        if (! $areaID) {
+            return response()->json([]);
+        }
 
-        $areaCategory = AreaCategory::where('areaID', $areaID)->get();
+        // tbl_area_category carries its own categoryName column, so no
+        // join against tbl_category is needed here.
+        $areaCategory = AreaCategory::where('areaID', $areaID)
+            ->orderBy('area_category_id')
+            ->get();
 
-        return $areaCategory;
-
+        return response()->json($areaCategory);
     }
 
 }

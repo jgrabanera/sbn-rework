@@ -8,9 +8,14 @@ use Illuminate\Http\Request;
 
 class ApoSightsSectionController extends Controller
 {
-    //
-    public function getData()
+    public function getData(Request $request)
     {
-        return ContentSights::orderBy('id', 'asc')->get();
+        $areaId = $request->integer('area');
+
+        if (! $areaId) {
+            return response()->json([]);
+        }
+
+        return ContentSights::where('areaID', $areaId)->orderBy('id', 'asc')->get();
     }
 }

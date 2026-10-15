@@ -2,16 +2,18 @@ import { useEffect, useState } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
-import axios from "axios";
+import { KioskEmpty, KioskError, KioskLoading } from "@/Components/KioskStates";
 import PdfCard from "@/Components/PdfCard";
 import PDFViewer from "@/Components/PDFViewer";
+import useKioskSection from "@/Hooks/useKioskSection";
 
 pdfjs.GlobalWorkerOptions.workerSrc = `/pdf.worker.min.mjs`;
 
 const ResearchesTab = ({ id }) => {
-    const [Researches, setResearches] = useState([]);
-    const [loading, setLoading] = useState(false);
-    const [errors, setErrors] = useState({});
+    const { data, loading, error, retry } = useKioskSection(
+        `/get-researches-section?area=${id}`,
+        { enabled: Boolean(id) },
+    );
 
     const [pageNumber, setPageNumber] = useState(1);
     const [numPages, setNumPages] = useState(null);
@@ -19,23 +21,6 @@ const ResearchesTab = ({ id }) => {
 
     const [isOpen, setIsOpen] = useState(false);
     const [selectedPdf, setSelectedPdf] = useState(null);
-
-    // Fetch data
-    const loadContentResearches = async () => {
-        try {
-            setLoading(true);
-            const res = await axios.get(`/get-researches-section`);
-            setResearches(res.data);
-        } catch (requestError) {
-            setErrors(requestError?.response?.data?.errors || {});
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    useEffect(() => {
-        loadContentResearches();
-    }, []);
 
     // Responsive PDF width
     useEffect(() => {
@@ -62,10 +47,6 @@ const ResearchesTab = ({ id }) => {
         setSelectedPdf(null);
     };
 
-    const filteredResearches = Researches?.filter(
-        (r) => String(r.area_id) === String(id),
-    );
-
     useEffect(() => {
         setIsOpen(false);
         setSelectedPdf(null);
@@ -73,10 +54,18 @@ const ResearchesTab = ({ id }) => {
 
     return (
         <div className="bg-white/70 p-4 sm:p-5 rounded-lg w-full md:min-h-[68vh] h-full">
-            {/* GRID */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-6">
-                {filteredResearches?.length > 0 ? (
-                    filteredResearches.map((research) => (
+            {loading && <KioskLoading />}
+
+            {!loading && error && <KioskError message={error} onRetry={retry} />}
+
+            {!loading && !error && !data?.length && (
+                <KioskEmpty message="No researches available" />
+            )}
+
+            {!loading && !error && data?.length > 0 && (
+                /* GRID */
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-6">
+                    {data.map((research) => (
                         <PdfCard
                             key={research.id}
                             research={research}
@@ -85,13 +74,9 @@ const ResearchesTab = ({ id }) => {
                                 setIsOpen(true);
                             }}
                         />
-                    ))
-                ) : (
-                    <p className="col-span-full text-center text-gray-500">
-                        No researches available
-                    </p>
-                )}
-            </div>
+                    ))}
+                </div>
+            )}
 
             {/* MODAL */}
             <PDFViewer isOpen={isOpen} onClose={handleClose}>
@@ -118,7 +103,9 @@ const ResearchesTab = ({ id }) => {
                             {/* CONTROLS */}
                             <div className="mt-4 flex flex-wrap justify-center items-center gap-2 sm:gap-4">
                                 <button
-                                    onClick={() => setPageNumber((p) => p - 1)}
+                                    onClick={() =>
+                                        setPageNumber((p) => Math.max(1, p - 1))
+                                    }
                                     disabled={pageNumber <= 1}
                                     className="px-3 sm:px-4 py-2 text-sm sm:text-base rounded-full bg-emerald-400 hover:bg-emerald-500 disabled:opacity-50"
                                 >

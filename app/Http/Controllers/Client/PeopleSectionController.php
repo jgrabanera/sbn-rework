@@ -8,10 +8,16 @@ use Illuminate\Http\Request;
 
 class PeopleSectionController extends Controller
 {
-    //
-    public function getData()
+    public function getData(Request $request)
     {
-        $data = People::all();
+        $areaId = $request->integer('area');
+
+        if (! $areaId) {
+            return response()->json([]);
+        }
+
+        $data = People::where('area_id', $areaId)->get();
+
         return response()->json($data);
     }
 }

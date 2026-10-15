@@ -8,10 +8,16 @@ use Illuminate\Http\Request;
 
 class ThreatsSectionController extends Controller
 {
-    //
-    public function getData()
+    public function getData(Request $request)
     {
-        $data = Threats::all();
+        $areaId = $request->integer('area');
+
+        if (! $areaId) {
+            return response()->json([]);
+        }
+
+        $data = Threats::where('area_id', $areaId)->get();
+
         return response()->json($data);
     }
 }

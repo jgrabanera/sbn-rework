@@ -1,162 +1,111 @@
 import { IoMdPin } from "react-icons/io";
-import { useState, useMemo, useEffect } from "react";
-import { Link } from "@inertiajs/react";
+import { useMemo, useState } from "react";
 import CKEditorDisplayer from "@/Components/CKEditorDisplayer";
+import { KioskEmpty, KioskError, KioskLoading } from "@/Components/KioskStates";
+import useKioskSection from "@/Hooks/useKioskSection";
+
+// Map pin layout for the APO Island dive sites. Positions are artwork
+// specific, so they stay in code alongside the site id they activate.
+const SPOTS = [
+    { id: 6, name: "Coconut", pos: "md:left-[680px] md:top-[200px]" },
+    { id: 7, name: "Olo", pos: "md:left-[780px] md:top-[256px]" },
+    { id: 8, name: "Cogon", pos: "md:left-[820px] md:top-[320px]" },
+    { id: 9, name: "Mamsa Point", pos: "md:left-[760px] md:top-[420px]" },
+    { id: 10, name: "Kan-Uran", pos: "md:left-[720px] md:top-[480px]" },
+    { id: 11, name: "Marine Sanctuary", pos: "md:left-[760px] md:top-[530px]" },
+    { id: 12, name: "Rock Point East", pos: "md:left-[710px] md:top-[630px]" },
+    { id: 5, name: "Rock Point West", pos: "md:left-[470px] md:top-[690px]" },
+    { id: 4, name: "Katipanan", pos: "md:left-[510px] md:top-[610px]" },
+    { id: 3, name: "Chapel", pos: "md:left-[540px] md:top-[530px]" },
+    { id: 1, name: "Baluarte", pos: "md:left-[460px] md:top-[450px]" },
+    { id: 2, name: "Largahan", pos: "md:left-[420px] md:top-[350px]" },
+];
 
 const ApoSightsTab = ({ id }) => {
-    const [ContentSights, setContentSights] = useState([]);
-    const [Sites, setSites] = useState([]);
+    const {
+        data: contentSights,
+        loading: loadingSights,
+        error: errorSights,
+        retry: retrySights,
+    } = useKioskSection(`/get-apo-sights-section?area=${id}`, {
+        enabled: Boolean(id),
+    });
 
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
+    const {
+        data: sites,
+        loading: loadingSites,
+        error: errorSites,
+        retry: retrySites,
+    } = useKioskSection(`/get-sights-section?area=${id}`, {
+        enabled: Boolean(id),
+    });
 
-    const [spotID, setSpotID] = useState(1);
+    const [spotID, setSpotID] = useState(null);
 
-    const handleSpotClick = (sID) => {
-        setSpotID(sID);
-        console.log("Clicked spot ID:", sID);
+    const loading = loadingSights || loadingSites;
+    const error = errorSights || errorSites;
+    const retry = () => {
+        retrySights();
+        retrySites();
     };
 
-    // find the active spot by ID
-    const activeSpot = useMemo(
-        () => ContentSights.find((spot) => spot.id === spotID) || null,
-        [ContentSights, spotID],
+    const sights = useMemo(
+        () => (Array.isArray(contentSights) ? contentSights : []),
+        [contentSights],
     );
 
-    const activeSite = useMemo(
-        () => Sites.find((site) => site.id == id) || null,
-        [Sites, id],
+    // Derive with a fallback so the panel is never empty by default.
+    const activeSpot =
+        sights.find((spot) => spot.id === spotID) ?? sights[0] ?? null;
+
+    // Only render pins that have real content behind them.
+    const visibleSpots = SPOTS.filter((spot) =>
+        sights.some((sight) => sight.id === spot.id),
     );
 
-    const loadSights = async () => {
-        try {
-            setLoading(true);
-            const res = await axios.get(`/get-apo-sights-section`);
-            setContentSights(res.data);
+    const activeSite = sites?.[0] ?? null;
 
-            const res1 = await axios.get(`/get-sights-section`);
-            setSites(res1.data);
-            //console.log("Loaded content sights:", res1.data);
-        } catch (requestError) {
-            setErrors(requestError?.response?.data?.errors || {});
-        } finally {
-            setLoading(false);
-        }
-    };
+    if (loading) return <KioskLoading />;
+    if (error) return <KioskError message={error} onRetry={retry} />;
+    if (!sights.length) {
+        return <KioskEmpty message="No dive site content available." />;
+    }
 
-    useEffect(() => {
-        loadSights();
-    }, []);
     const baseBtnClasses =
         "rounded-md h-8 min-w-30 bg-white/80 flex flex-row items-center justify-center absolute px-2 text-gray-900 text-center uppercase text-sm font-semibold  hover:scale-110 duration-100";
 
     return (
         <div className="flex flex-col md:flex-row gap-4 items-stretch w-full md:min-h-[68vh] md:max-h-[68vh] h-full">
             {/* Map image with pins */}
-
             {activeSite && (
                 <div
                     style={{
-                        backgroundImage: `url("/storage/images/${activeSite?.map_filename}")`,
+                        backgroundImage: `url("/storage/images/${activeSite.map_filename}")`,
                     }}
                     className="h-56 md:min-h-[68vh] md:max-h-[68vh] w-full max-w-5xl bg-cover bg-center bg-no-repeat rounded-lg border-4 border-gray-200 sm:pt-0"
                 >
-                    <button
-                        href="#"
-                        onClick={() => handleSpotClick(6)}
-                        className={`md:left-[680px] md:top-[200px] ${baseBtnClasses}`}
-                    >
-                        <IoMdPin color="#ff3e3e" size={24} /> Coconut
-                    </button>
-                    <button
-                        href="#"
-                        onClick={() => handleSpotClick(7)}
-                        className={`md:left-[780px] md:top-[256px] ${baseBtnClasses}`}
-                    >
-                        <IoMdPin color="#ff3e3e" size={24} /> Olo
-                    </button>
-                    <button
-                        href="#"
-                        onClick={() => handleSpotClick(8)}
-                        className={`md:left-[820px] md:top-[320px] ${baseBtnClasses}`}
-                    >
-                        <IoMdPin color="#ff3e3e" size={24} /> Cogon
-                    </button>
-                    <button
-                        href="#"
-                        onClick={() => handleSpotClick(9)}
-                        className={`md:left-[760px] md:top-[420px]  ${baseBtnClasses}`}
-                    >
-                        <IoMdPin color="#ff3e3e" size={24} /> Mamsa Point
-                    </button>
-                    <button
-                        href="#"
-                        onClick={() => handleSpotClick(10)}
-                        className={`md:left-[720px] md:top-[480px] ${baseBtnClasses}`}
-                    >
-                        <IoMdPin color="#ff3e3e" size={24} /> Kan-Uran
-                    </button>
-                    <button
-                        href="#"
-                        onClick={() => handleSpotClick(11)}
-                        className={`md:left-[760px] md:top-[530px] ${baseBtnClasses}`}
-                    >
-                        <IoMdPin color="#ff3e3e" size={24} /> Marine Sanctuary
-                    </button>
-                    <button
-                        href="#"
-                        onClick={() => handleSpotClick(12)}
-                        className={`md:left-[710px] md:top-[630px] ${baseBtnClasses}`}
-                    >
-                        <IoMdPin color="#ff3e3e" size={24} /> Rock Point East
-                    </button>
-                    <button
-                        href="#"
-                        onClick={() => handleSpotClick(5)}
-                        className={`md:left-[470px] md:top-[690px] ${baseBtnClasses}`}
-                    >
-                        <IoMdPin color="#ff3e3e" size={24} /> Rock Point West
-                    </button>
-                    <button
-                        href="#"
-                        onClick={() => handleSpotClick(4)}
-                        className={`md:left-[510px] md:top-[610px]  ${baseBtnClasses}`}
-                    >
-                        <IoMdPin color="#ff3e3e" size={24} /> Katipanan
-                    </button>
-                    <button
-                        href="#"
-                        onClick={() => handleSpotClick(3)}
-                        className={`md:left-[540px] md:top-[530px] ${baseBtnClasses}`}
-                    >
-                        <IoMdPin color="#ff3e3e" size={24} /> Chapel
-                    </button>
-                    <button
-                        href="#"
-                        onClick={() => handleSpotClick(1)}
-                        className={`md:left-[460px] md:top-[450px] ${baseBtnClasses}`}
-                    >
-                        <IoMdPin color="#ff3e3e" size={24} /> Baluarte
-                    </button>
-                    <button
-                        href="#"
-                        onClick={() => handleSpotClick(2)}
-                        className={`md:left-[420px] md:top-[350px] ${baseBtnClasses}`}
-                    >
-                        <IoMdPin color="#ff3e3e" size={24} /> Largahan
-                    </button>
+                    {visibleSpots.map((spot) => (
+                        <button
+                            key={spot.id}
+                            type="button"
+                            onClick={() => setSpotID(spot.id)}
+                            aria-pressed={activeSpot?.id === spot.id}
+                            className={`${spot.pos} ${baseBtnClasses} ${
+                                activeSpot?.id === spot.id
+                                    ? "ring-2 ring-emerald-400"
+                                    : ""
+                            }`}
+                        >
+                            <IoMdPin color="#ff3e3e" size={24} />
+                            {spot.name}
+                        </button>
+                    ))}
                 </div>
             )}
 
             {/* Right side – content */}
             <div className="flex-1 flex flex-col bg-white rounded-lg shadow-lg/20 p-4 ">
                 <div className="flex-1 w-full flex flex-col justify-start overflow-y-scroll">
-                    {!ContentSights.length && (
-                        <p className="text-gray-400 text-sm">
-                            Loading sights...
-                        </p>
-                    )}
-
                     {activeSpot && (
                         <>
                             <h2 className="text-2xl font-semibold mb-4 text-blue-500">
@@ -168,13 +117,6 @@ const ApoSightsTab = ({ id }) => {
                                 />
                             </div>
                         </>
-                    )}
-
-                    {!activeSpot && ContentSights.length > 0 && (
-                        <p className="text-gray-500 text-sm italic">
-                            Click a pin on the map to view details about a dive
-                            site.
-                        </p>
                     )}
                 </div>
             </div>

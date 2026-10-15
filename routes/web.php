@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AreaController;
+use App\Http\Controllers\AdminSummaryController;
 use App\Http\Controllers\ConservationController;
 use App\Http\Controllers\ContentSightsController;
 use App\Http\Controllers\ContentAboutController;
@@ -153,6 +154,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+
+    Route::get('/admin/summary', [AdminSummaryController::class, 'index']);
 });
 
 require __DIR__ . '/auth.php';

@@ -15,13 +15,38 @@ import { Link, usePage } from "@inertiajs/react";
 import { PiSealWarningFill } from "react-icons/pi";
 import ApplicationLogoWide from "@/Components/ApplicationLogoWide";
 import { BsPatchQuestionFill } from "react-icons/bs";
+import { useAdminSections } from "@/Hooks/useAdminSections";
 
-const SidebarNavigation = ({ user }) => {
+// Icon components keyed by the `icon` value in config/admin.php.
+const ICONS = {
+    category: BiSolidCategoryAlt,
+    help: TbHelpHexagonFilled,
+    flag: GiFlyingFlag,
+    animals: GiPlantsAndAnimals,
+    compost: MdOutlineCompost,
+    forest: GiCircleForest,
+    people: FaPeopleRoof,
+    warning: PiSealWarningFill,
+    research: GiArchiveResearch,
+    accounts: MdManageAccounts,
+    checklist: MdOutlineChecklistRtl,
+    quiz: BsPatchQuestionFill,
+};
+
+const SidebarNavigation = () => {
     const { url } = usePage();
+    const sections = useAdminSections();
+
     const baseNav =
         "flex items-center px-3 py-2 rounded-lg hover:bg-teal-800 hover:text-yellow-100";
     const activeNav = `${baseNav} bg-teal-800 text-white`;
     const inactiveNav = `${baseNav} text-black`;
+
+    // Longest route first so `/area-category` wins over `/area`.
+    const isActive = (route) => {
+        const current = url.split("?")[0].replace(/\/$/, "");
+        return current === route || current.startsWith(`${route}/`);
+    };
 
     return (
         <div className=" text-gray-900 flex flex-col justify-between">
@@ -34,126 +59,38 @@ const SidebarNavigation = ({ user }) => {
             <nav className="flex-1 p-4 space-y-1">
                 <Link
                     href={route("dashboard")}
-                    className={`${
-                        url.includes("/dashboard") ? activeNav : inactiveNav
+                    className={`${baseNav} ${
+                        isActive("/dashboard")
+                            ? "bg-teal-800 text-white"
+                            : "text-black"
                     }`}
                 >
                     <FaHome className="w-5 h-5 mr-3" />
                     <span className="flex-1">Dashboard</span>
                 </Link>
-                <Link
-                    href={route("area-category")}
-                    className={`${
-                        url.includes("/area") ? activeNav : inactiveNav
-                    }`}
-                >
-                    <BiSolidCategoryAlt className="w-5 h-5 mr-3" />
-                    <span className="flex-1">Area Category</span>
-                </Link>
-                <Link
-                    href={route("about-category")}
-                    className={`${
-                        url.includes("/about") ? activeNav : inactiveNav
-                    }`}
-                >
-                    <TbHelpHexagonFilled className="w-5 h-5 mr-3" />
-                    <span className="flex-1">About</span>
-                </Link>
-                <Link
-                    href={route("sights-category")}
-                    className={`${
-                        url.includes("/sights") ? activeNav : inactiveNav
-                    }`}
-                >
-                    <GiFlyingFlag className="w-5 h-5 mr-3" />
-                    <span className="flex-1">Sights To See</span>
-                </Link>
-                <Link
-                    href={route("wildlife-category")}
-                    className={`${
-                        url.includes("/wildlife") ? activeNav : inactiveNav
-                    }`}
-                >
-                    <GiPlantsAndAnimals className="w-5 h-5 mr-3" />
-                    <span className="flex-1">Wildlife</span>
-                </Link>
 
-                <Link
-                    href={route("ecotourism-category")}
-                    className={`${
-                        url.includes("/ecotourism") ? activeNav : inactiveNav
-                    }`}
-                >
-                    <MdOutlineCompost className="w-5 h-5 mr-3" />
-                    <span className="flex-1">Ecotourism</span>
-                </Link>
-                <Link
-                    href={route("conservation-category")}
-                    className={`${
-                        url.includes("/conservation") ? activeNav : inactiveNav
-                    }`}
-                >
-                    <GiCircleForest className="w-5 h-5 mr-3" />
-                    <span className="flex-1">Conservation</span>
-                </Link>
-                <Link
-                    href={route("people-category")}
-                    className={`${
-                        url.includes("/people") ? activeNav : inactiveNav
-                    }`}
-                >
-                    <FaPeopleRoof className="w-5 h-5 mr-3" />
-                    <span className="flex-1">People</span>
-                </Link>
-                <Link
-                    href={route("threats-category")}
-                    className={`${
-                        url.includes("/threats") ? activeNav : inactiveNav
-                    }`}
-                >
-                    <PiSealWarningFill className="w-5 h-5 mr-3" />
-                    <span className="flex-1">Threats</span>
-                </Link>
-                <Link
-                    href={route("researches-category")}
-                    className={`${
-                        url.includes("/researches") ? activeNav : inactiveNav
-                    }`}
-                >
-                    <GiArchiveResearch className="w-5 h-5 mr-3" />
-                    <span className="flex-1">Researches</span>
-                </Link>
-                <Link
-                    href={route("management-category")}
-                    className={`${
-                        url.includes("/management") ? activeNav : inactiveNav
-                    }`}
-                >
-                    <MdManageAccounts className="w-5 h-5 mr-3" />
-                    <span className="flex-1">Management</span>
-                </Link>
-                <Link
-                    href={route("dos-and-donts-category")}
-                    className={`${
-                        url.includes("/dos-and-donts")
-                            ? activeNav
-                            : inactiveNav
-                    }`}
-                >
-                    <MdOutlineChecklistRtl className="w-5 h-5 mr-3" />
-                    <span className="flex-1">Do&apos;s and Don&apos;ts</span>
-                </Link>
-                <Link
-                    href={route("quiz-category")}
-                    className={`${
-                        url.includes("/quiz-category")
-                            ? activeNav
-                            : inactiveNav
-                    }`}
-                >
-                    <BsPatchQuestionFill className="w-5 h-5 mr-3" />
-                    <span className="flex-1">Quiz CMS</span>
-                </Link>
+                {sections.map((section) => {
+                    const Icon = ICONS[section.icon];
+
+                    return (
+                        <Link
+                            key={section.key}
+                            href={section.route}
+                            className={isActive(section.route)
+                                ? activeNav
+                                : inactiveNav}
+                        >
+                            {Icon ? (
+                                <Icon className="w-5 h-5 mr-3" />
+                            ) : (
+                                <span className="w-5 h-5 mr-3" />
+                            )}
+                            <span className="flex-1">
+                                {section.sidebar_label ?? section.title}
+                            </span>
+                        </Link>
+                    );
+                })}
             </nav>
         </div>
     );

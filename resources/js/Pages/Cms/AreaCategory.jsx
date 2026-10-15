@@ -5,6 +5,7 @@ import Modal from "@/Components/Modal";
 import { MdDeleteForever } from "react-icons/md";
 import { AiOutlineEdit } from "react-icons/ai";
 import { FaPlusCircle } from "react-icons/fa";
+import axios from "axios";
 
 const emptyForm = {
     areaName: "",

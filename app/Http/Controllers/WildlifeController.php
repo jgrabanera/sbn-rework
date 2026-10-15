@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\RichTextService;
 use App\Models\WildlifeItem;
 use App\Models\WildlifeItemContent;
 use App\Models\WildlifeTabs;
@@ -12,6 +13,10 @@ use Illuminate\Support\Str;
 
 class WildlifeController extends Controller
 {
+    public function __construct(
+        protected RichTextService $richText,
+    ) {}
+
     public function tabs(Request $request)
     {
         $areaId = $request->integer('area_id');
@@ -23,41 +28,6 @@ class WildlifeController extends Controller
             })
             ->orderBy('tab_name')
             ->get();
-    }
-    public function convertToPlainHtml($description)
-    {
-        $dom = new \DOMDocument();
-
-        libxml_use_internal_errors(true);
-
-        // Force UTF-8 encoding
-        $dom->loadHTML(
-            '<?xml encoding="utf-8" ?>' . $description,
-            LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD
-        );
-
-        libxml_clear_errors();
-
-        $images = $dom->getElementsByTagName('img');
-
-        foreach ($images as $img) {
-            $src = $img->getAttribute('src');
-
-            if (Str::contains($src, 'data:image')) {
-                preg_match('/data:image\/(\w+);base64,/', $src, $match);
-                $extension = $match[1];
-
-                $base64 = preg_replace('/^data:image\/\w+;base64,/', '', $src);
-                $imageData = base64_decode($base64);
-
-                $filename = 'images/' . uniqid() . '.' . $extension;
-
-                Storage::disk('public')->put($filename, $imageData);
-                $img->setAttribute('src', '/storage/' . $filename);
-            }
-        }
-
-        return $dom->saveHTML();
     }
 
     public function index(Request $request)
@@ -134,7 +104,7 @@ class WildlifeController extends Controller
             $content = WildlifeItemContent::create([
                 'id' => $this->nextTableId('tbl_wildlife_item_content'),
                 'wildlife_item_id' => $itemId,
-                'content' => $this->convertToPlainHtml($validated['content'] ?? ''),
+                'content' => $this->richText->convertToPlainHtml($validated['content'] ?? ''),
             ]);
 
             return [
@@ -187,13 +157,13 @@ class WildlifeController extends Controller
 
             if ($content) {
                 $content->update([
-                    'content' => $this->convertToPlainHtml($validated['content'] ?? ''),
+                    'content' => $this->richText->convertToPlainHtml($validated['content'] ?? ''),
                 ]);
             } else {
                 WildlifeItemContent::create([
                     'id' => $this->nextTableId('tbl_wildlife_item_content'),
                     'wildlife_item_id' => $wildlife->id,
-                    'content' => $this->convertToPlainHtml($validated['content'] ?? ''),
+                    'content' => $this->richText->convertToPlainHtml($validated['content'] ?? ''),
                 ]);
             }
 

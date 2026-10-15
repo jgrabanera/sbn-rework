@@ -2,7 +2,8 @@ import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
 import { Head, Link } from "@inertiajs/react";
 import Lottie from "lottie-react";
 import { useEffect, useState } from "react";
-import { adminSectionList } from "@/components/adminSections";
+import axios from "axios";
+import { useAdminSections } from "@/Hooks/useAdminSections";
 
 import area from "../../../assets/lottiefiles/area.json";
 import leaf from "../../../assets/lottiefiles/leaf.json";
@@ -66,11 +67,14 @@ function DashboardCard({ section, count }) {
 }
 
 export default function Dashboard() {
-    const [summary, setSummary] = useState({
-        sections: [],
-        totals: { sections: adminSectionList.length, records: 0 },
+    const fallbackSections = useAdminSections();
+    const [totals, setTotals] = useState({
+        sections: fallbackSections.length,
+        records: 0,
     });
+    const [counts, setCounts] = useState({});
     const [loading, setLoading] = useState(true);
+    const [failed, setFailed] = useState(false);
 
     useEffect(() => {
         let active = true;
@@ -79,26 +83,26 @@ export default function Dashboard() {
             try {
                 const response = await axios.get("/admin/summary");
 
-                if (active) {
-                    setSummary(response.data);
-                }
-            } catch (error) {
-                if (active) {
-                    setSummary({
-                        sections: adminSectionList.map((section) => ({
-                            ...section,
-                            count: 0,
-                        })),
-                        totals: {
-                            sections: adminSectionList.length,
-                            records: 0,
-                        },
-                    });
-                }
+                if (!active) return;
+
+                const sections = Array.isArray(response.data?.sections)
+                    ? response.data.sections
+                    : [];
+
+                setCounts(
+                    Object.fromEntries(
+                        sections.map((s) => [s.key, s.count]),
+                    ),
+                );
+                setTotals(response.data?.totals ?? totals);
+                setFailed(false);
+            } catch {
+                if (!active) return;
+                // The cards still render from the shared config; only the
+                // per-section counts fall back to a dash.
+                setFailed(true);
             } finally {
-                if (active) {
-                    setLoading(false);
-                }
+                if (active) setLoading(false);
             }
         };
 
@@ -107,11 +111,8 @@ export default function Dashboard() {
         return () => {
             active = false;
         };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
-
-    const sections = summary.sections.length
-        ? summary.sections
-        : adminSectionList.map((section) => ({ ...section, count: 0 }));
 
     return (
         <>
@@ -124,13 +125,23 @@ export default function Dashboard() {
                             Admin Control Center
                         </p>
 
+                        {failed && (
+                            <p
+                                role="alert"
+                                className="mt-3 rounded-lg bg-amber-100 px-4 py-2 text-sm font-medium text-amber-900"
+                            >
+                                Record counts are unavailable. Section links
+                                still work.
+                            </p>
+                        )}
+
                         <div className="mt-6 grid gap-4 md:grid-cols-3">
                             <div className="rounded-xl bg-white/10 py-2 px-4 backdrop-blur-sm">
                                 <p className="text-sm text-emerald-50/80">
                                     Sections
                                 </p>
                                 <p className="mt-2 text-3xl font-semibold">
-                                    {summary.totals.sections}
+                                    {totals.sections}
                                 </p>
                             </div>
                             <div className="rounded-xl bg-white/10 py-2 px-4 backdrop-blur-sm">
@@ -138,7 +149,11 @@ export default function Dashboard() {
                                     Tracked records
                                 </p>
                                 <p className="mt-2 text-3xl font-semibold">
-                                    {loading ? "..." : summary.totals.records}
+                                    {loading
+                                        ? "..."
+                                        : failed
+                                          ? "-"
+                                          : totals.records}
                                 </p>
                             </div>
                             <div className="rounded-xl bg-white/10 py-2 px-4 backdrop-blur-sm">
@@ -153,11 +168,15 @@ export default function Dashboard() {
                     </section>
 
                     <section className="mt-6 grid gap-4 md:grid-cols-4 lg:grid-cols-5">
-                        {sections.map((section) => (
+                        {fallbackSections.map((section) => (
                             <DashboardCard
                                 key={section.key}
                                 section={section}
-                                count={section.count ?? 0}
+                                count={
+                                    loading
+                                        ? "-"
+                                        : (counts[section.key] ?? "-")
+                                }
                             />
                         ))}
                     </section>

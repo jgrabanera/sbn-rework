@@ -3,6 +3,7 @@ import { useState, useCallback } from "react";
 import { AiOutlineEdit } from "react-icons/ai";
 import { FaTableList } from "react-icons/fa6";
 import { LuFile, LuUpload } from "react-icons/lu";
+import axios from "axios";
 
 const AreaModalEdit = () => {
     const [modalOpen, setModalOpen] = useState(false);

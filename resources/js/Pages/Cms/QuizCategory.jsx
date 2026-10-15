@@ -5,6 +5,7 @@ import Modal from "@/Components/Modal";
 import { AiOutlineEdit } from "react-icons/ai";
 import { MdDeleteForever } from "react-icons/md";
 import { FaPlusCircle } from "react-icons/fa";
+import axios from "axios";
 
 const emptyForm = {
     level_of_difficulty: 1,

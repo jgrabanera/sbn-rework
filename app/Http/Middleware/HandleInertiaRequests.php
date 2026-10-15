@@ -34,6 +34,9 @@ class HandleInertiaRequests extends Middleware
             'auth' => [
                 'user' => $request->user(),
             ],
+            // Single source of truth for the admin sidebar + dashboard,
+            // replacing the duplicated JS config and hardcoded link list.
+            'adminSections' => config('admin.sections', []),
         ];
     }
 }

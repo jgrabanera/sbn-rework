@@ -3,6 +3,7 @@ import { useState, useCallback } from "react";
 import { FaPlusCircle } from "react-icons/fa";
 import { FaTableList } from "react-icons/fa6";
 import { LuFile, LuUpload } from "react-icons/lu";
+import axios from "axios";
 
 const AreaModal = () => {
     const [modalOpen, setModalOpen] = useState(false);

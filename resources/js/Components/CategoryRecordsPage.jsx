@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Head } from "@inertiajs/react";
+import axios from "axios";
 import { AiOutlineEdit } from "react-icons/ai";
 import { FaPlusCircle } from "react-icons/fa";
 import { MdDeleteForever } from "react-icons/md";

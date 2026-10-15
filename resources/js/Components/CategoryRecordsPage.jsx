@@ -1,10 +1,20 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Head } from "@inertiajs/react";
 import axios from "axios";
+import { Head } from "@inertiajs/react";
 import { AiOutlineEdit } from "react-icons/ai";
 import { FaPlusCircle } from "react-icons/fa";
 import { MdDeleteForever } from "react-icons/md";
+import {
+    EmptyState,
+    ErrorState,
+    LoadingState,
+    PageHeader,
+    Pagination,
+    SearchInput,
+} from "@/Components/Cms";
+import ConfirmDialog from "@/Components/ConfirmDialog";
 import Modal from "@/Components/Modal";
+import { ToastBanner, useToast } from "@/Components/Toast";
 import { CKEditor } from "@ckeditor/ckeditor5-react";
 import {
     ClassicEditor,
@@ -77,6 +87,14 @@ const editorConfig = {
     ],
 };
 
+const EMPTY_PAGE = {
+    data: [],
+    current_page: 1,
+    last_page: 1,
+    next_page_url: null,
+    prev_page_url: null,
+};
+
 const CategoryRecordsPage = ({
     title,
     description,
@@ -89,16 +107,11 @@ const CategoryRecordsPage = ({
     editConfig = null,
     deleteConfig = null,
 }) => {
-    const [records, setRecords] = useState({
-        data: [],
-        current_page: 1,
-        last_page: 1,
-        next_page_url: null,
-        prev_page_url: null,
-    });
+    const [records, setRecords] = useState(EMPTY_PAGE);
     const [searchInput, setSearchInput] = useState("");
     const [search, setSearch] = useState("");
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(true);
+    const [loadError, setLoadError] = useState(null);
     const [areas, setAreas] = useState([]);
     const [lookupLoading, setLookupLoading] = useState(false);
     const [modalOpen, setModalOpen] = useState(false);
@@ -106,20 +119,37 @@ const CategoryRecordsPage = ({
     const [editingRecord, setEditingRecord] = useState(null);
     const [form, setForm] = useState({});
     const [errors, setErrors] = useState({});
-    const [successMessage, setSuccessMessage] = useState("");
+    const [pendingDelete, setPendingDelete] = useState(null);
+    const [deleting, setDeleting] = useState(false);
+    const { toast, notify, dismiss } = useToast();
 
     const isEditable = Boolean(editConfig);
     const canCreate = Boolean(createConfig?.storeEndpoint);
     const canDelete = Boolean(deleteConfig?.deleteEndpoint);
+    const activeFields = editingRecord
+        ? (editConfig?.fields ?? [])
+        : (createConfig?.fields ?? editConfig?.fields ?? []);
 
     const buildEmptyForm = () =>
-        [...(createConfig?.fields ?? editConfig?.fields ?? [])].reduce(
-            (current, field) => {
-                current[field.name] = field.type === "file" ? null : "";
+        [...activeFields].reduce((current, field) => {
+            current[field.name] = field.type === "file" ? null : "";
+            return current;
+        }, {});
+
+    const buildFormFromRecord = (record) =>
+        (editConfig?.fields ?? []).reduce((current, field) => {
+            if (field.type === "file") {
+                current[field.name] = null;
                 return current;
-            },
-            {},
-        );
+            }
+
+            const value =
+                field.getValue?.(record) ?? record[field.name] ?? "";
+            current[field.name] = String(value ?? "");
+            return current;
+        }, {});
+
+    /* ---- Data loading ------------------------------------------- */
 
     const loadAreas = async () => {
         setLookupLoading(true);
@@ -135,21 +165,28 @@ const CategoryRecordsPage = ({
 
     const loadRecords = async (page = 1, keyword = search) => {
         setLoading(true);
+        setLoadError(null);
         try {
             const res = await axios.get(endpoint, {
                 params: { page, search: keyword, per_page: 10 },
             });
-            setRecords(res.data);
+            setRecords({ ...EMPTY_PAGE, ...res.data });
         } catch (error) {
             console.error(
                 `Error loading ${title.toLowerCase()} records:`,
                 error,
             );
+            setLoadError(
+                error?.response?.data?.message ??
+                    "The request did not complete.",
+            );
+            setRecords(EMPTY_PAGE);
         } finally {
             setLoading(false);
         }
     };
 
+    // Debounce the search box so typing does not fire a request per key.
     useEffect(() => {
         const timeout = window.setTimeout(() => {
             setSearch(searchInput.trim());
@@ -160,41 +197,33 @@ const CategoryRecordsPage = ({
 
     useEffect(() => {
         loadRecords(1, search);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [search]);
 
     useEffect(() => {
-        if (isEditable) {
-            loadAreas();
-        }
+        if (isEditable) loadAreas();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isEditable]);
 
-    useEffect(() => {
-        if (!successMessage) {
-            return undefined;
-        }
+    /* ---- Derived ------------------------------------------------ */
 
-        const timeout = window.setTimeout(() => {
-            setSuccessMessage("");
-        }, 2500);
+    const rows = records.data ?? [];
+    const listError = loadError;
+    const hasRows = rows.length > 0;
 
-        return () => window.clearTimeout(timeout);
-    }, [successMessage]);
+    const rowSummary = useMemo(() => {
+        if (loading) return `Loading ${title.toLowerCase()} records...`;
 
-    const pageSummary = useMemo(() => {
-        if (loading) {
-            return `Loading ${title.toLowerCase()} records...`;
-        }
-
-        if (!records.data?.length) {
+        if (!hasRows) {
             return search
                 ? `No ${emptyLabel} match the current search.`
                 : `No ${emptyLabel} found.`;
         }
 
-        return `${records.data.length} ${emptyLabel}${
-            records.data.length === 1 ? "" : "s"
+        return `${rows.length} ${emptyLabel}${
+            rows.length === 1 ? "" : "s"
         } on this page`;
-    }, [emptyLabel, loading, records.data, search, title]);
+    }, [emptyLabel, hasRows, loading, rows.length, search, title]);
 
     const handlePageChange = (page) => {
         if (page >= 1 && page <= records.last_page && !loading) {
@@ -202,28 +231,13 @@ const CategoryRecordsPage = ({
         }
     };
 
-    const resetForm = () => {
-        setForm(buildEmptyForm());
-        setErrors({});
-        setEditingRecord(null);
-    };
+    /* ---- Modal -------------------------------------------------- */
 
     const closeModal = () => {
         setModalOpen(false);
-        resetForm();
-    };
-
-    const buildFormFromRecord = (record) => {
-        return (editConfig?.fields ?? []).reduce((current, field) => {
-            if (field.type === "file") {
-                current[field.name] = null;
-                return current;
-            }
-
-            const value = field.getValue?.(record) ?? record[field.name] ?? "";
-            current[field.name] = String(value ?? "");
-            return current;
-        }, {});
+        setEditingRecord(null);
+        setForm({});
+        setErrors({});
     };
 
     const openCreateModal = () => {
@@ -234,28 +248,28 @@ const CategoryRecordsPage = ({
     };
 
     const openEditModal = (record) => {
-        const nextForm = buildFormFromRecord(record);
-
         setEditingRecord(record);
-        setForm(nextForm);
+        setForm(buildFormFromRecord(record));
         setErrors({});
         setModalOpen(true);
     };
 
     const handleChange = (event) => {
         const { name, value, files } = event.target;
-        const changedField = editConfig?.fields?.find(
+        const changedField = activeFields.find(
             (field) => field.name === name,
         );
         const nextValue =
             changedField?.type === "file" ? (files?.[0] ?? null) : value;
 
-        const shouldSyncSelectedAreaRecord =
+        // Switching area in the form re-points the modal at the matching
+        // record so article/image fields show that area's content.
+        const isAreaField =
             changedField?.type === "select" &&
             (name === "area_id" || name === "areaID");
 
-        if (shouldSyncSelectedAreaRecord) {
-            const matchedRecord = records.data?.find(
+        if (isAreaField) {
+            const matchedRecord = rows.find(
                 (record) =>
                     String(record.area_id ?? record.areaID ?? "") === value,
             );
@@ -275,11 +289,6 @@ const CategoryRecordsPage = ({
     const handleSubmit = async (event) => {
         event.preventDefault();
 
-        const activeFields =
-            editingRecord || !createConfig
-                ? (editConfig?.fields ?? [])
-                : (createConfig?.fields ?? editConfig?.fields ?? []);
-
         if (
             (editingRecord && !editConfig?.updateEndpoint) ||
             (!editingRecord && !createConfig?.storeEndpoint)
@@ -297,9 +306,7 @@ const CategoryRecordsPage = ({
                 const value = form[field.name];
 
                 if (field.type === "file") {
-                    if (value) {
-                        payload.append(field.name, value);
-                    }
+                    if (value) payload.append(field.name, value);
                     return;
                 }
 
@@ -311,7 +318,9 @@ const CategoryRecordsPage = ({
                     editConfig.updateEndpoint(editingRecord.id),
                     payload,
                     {
-                        headers: { "Content-Type": "multipart/form-data" },
+                        headers: {
+                            "Content-Type": "multipart/form-data",
+                        },
                     },
                 );
             } else {
@@ -320,22 +329,29 @@ const CategoryRecordsPage = ({
                 });
             }
 
-            setSuccessMessage(
+            notify(
                 editingRecord
                     ? `${title} updated successfully.`
                     : `${title} added successfully.`,
             );
+
+            const page = editingRecord ? records.current_page : 1;
             closeModal();
-            await loadRecords(editingRecord ? records.current_page : 1, search);
+            await loadRecords(page, search);
         } catch (error) {
-            console.error(`Error saving ${title.toLowerCase()} record:`, error);
+            console.error(
+                `Error saving ${title.toLowerCase()} record:`,
+                error,
+            );
 
             if (error.response?.status === 422) {
                 setErrors(error.response.data.errors ?? {});
+                notify("Please correct the highlighted fields.", "error");
             } else {
-                window.alert(
+                notify(
                     error.response?.data?.message ??
                         `Unable to save ${title.toLowerCase()} record.`,
+                    "error",
                 );
             }
         } finally {
@@ -343,203 +359,220 @@ const CategoryRecordsPage = ({
         }
     };
 
-    const handleDelete = async (record) => {
-        if (!canDelete) {
-            return;
-        }
+    /* ---- Delete ------------------------------------------------- */
 
-        const confirmed = window.confirm(
-            deleteConfig?.confirmMessage?.(record) ??
-                `Delete this ${emptyLabel}?`,
-        );
+    const confirmDelete = async () => {
+        if (!pendingDelete || !canDelete) return;
 
-        if (!confirmed) {
-            return;
-        }
+        setDeleting(true);
 
         try {
-            await axios.delete(deleteConfig.deleteEndpoint(record.id));
+            await axios.delete(
+                deleteConfig.deleteEndpoint(pendingDelete.id),
+            );
 
             const nextPage =
-                records.data.length === 1 && records.current_page > 1
+                rows.length === 1 && records.current_page > 1
                     ? records.current_page - 1
                     : records.current_page;
 
-            setSuccessMessage(
-                deleteConfig?.successMessage?.(record) ??
+            notify(
+                deleteConfig?.successMessage?.(pendingDelete) ??
                     `${title} deleted successfully.`,
             );
+            setPendingDelete(null);
             await loadRecords(nextPage, search);
         } catch (error) {
             console.error(
                 `Error deleting ${title.toLowerCase()} record:`,
                 error,
             );
-            window.alert(
+            notify(
                 error.response?.data?.message ??
                     `Unable to delete ${title.toLowerCase()} record.`,
+                "error",
+            );
+        } finally {
+            setDeleting(false);
+        }
+    };
+
+    /* ---- Render ------------------------------------------------- */
+
+    const tableBody = () => {
+        if (loading) {
+            return (
+                <tr>
+                    <td
+                        colSpan={columns.length + (isEditable ? 1 : 0)}
+                        className="px-4 py-12"
+                    >
+                        <LoadingState />
+                    </td>
+                </tr>
             );
         }
+
+        if (listError) {
+            return (
+                <tr>
+                    <td
+                        colSpan={columns.length + (isEditable ? 1 : 0)}
+                        className="px-4 py-12"
+                    >
+                        <ErrorState
+                            message={listError}
+                            onRetry={() => loadRecords(1, search)}
+                        />
+                    </td>
+                </tr>
+            );
+        }
+
+        if (!hasRows) {
+            return (
+                <tr>
+                    <td
+                        colSpan={columns.length + (isEditable ? 1 : 0)}
+                        className="px-4 py-12"
+                    >
+                        <EmptyState
+                            message={
+                                search
+                                    ? `No ${emptyLabel} match the current search.`
+                                    : `No ${emptyLabel} found.`
+                            }
+                        />
+                    </td>
+                </tr>
+            );
+        }
+
+        return rows.map((record) => (
+            <tr key={record.id}>
+                {columns.map((column) => (
+                    <td
+                        key={`${record.id}-${column.header}`}
+                        className={column.cellClassName ?? ""}
+                    >
+                        {column.render(record)}
+                    </td>
+                ))}
+                {isEditable ? (
+                    <td>
+                        <div className="flex items-center justify-center gap-2">
+                            <button
+                                type="button"
+                                onClick={() => openEditModal(record)}
+                                className="btn-icon-secondary"
+                                aria-label={`Edit ${emptyLabel}`}
+                            >
+                                <AiOutlineEdit size={18} />
+                            </button>
+                            {canDelete ? (
+                                <button
+                                    type="button"
+                                    onClick={() =>
+                                        setPendingDelete(record)
+                                    }
+                                    className="btn-icon-danger"
+                                    aria-label={`Delete ${emptyLabel}`}
+                                >
+                                    <MdDeleteForever size={18} />
+                                </button>
+                            ) : null}
+                        </div>
+                    </td>
+                ) : null}
+            </tr>
+        ));
     };
 
     return (
         <>
             <Head title={title} />
-            {successMessage ? (
-                <div
-                    role="status"
-                    className="fixed left-1/2 top-5 z-[70] w-[calc(100%-2rem)] max-w-md -translate-x-1/2 rounded-full bg-emerald-600 px-5 py-3 text-center text-sm font-semibold text-white shadow-xl"
-                >
-                    {successMessage}
-                </div>
-            ) : null}
-            <div className="min-h-screen flex flex-col items-center justify-start">
-                <div className="w-full md:px-8 px-4 py-6">
-                    <div className="flex flex-col gap-3 md:flex-row justify-between items-center bg-white shadow-sm rounded-md md:p-6 p-4 mb-4 border border-gray-200">
-                        <div>
-                            <h3 className="text-lg md:text-xl font-semibold text-gray-800">
-                                {title}
-                            </h3>
-                            <p className="text-sm text-gray-500 mt-1">
-                                {description}
-                            </p>
-                        </div>
 
-                        <div className="w-full md:w-96">
-                            <input
-                                type="text"
+            <ToastBanner toast={toast} onDismiss={dismiss} />
+
+            <div className="cms-shell">
+                <div className="cms-container">
+                    <PageHeader
+                        title={title}
+                        description={description}
+                        search={
+                            <SearchInput
                                 value={searchInput}
-                                onChange={(e) =>
-                                    setSearchInput(e.target.value)
-                                }
+                                onChange={setSearchInput}
                                 placeholder={searchPlaceholder}
-                                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-400 focus:outline-none"
                             />
-                            <p className="mt-2 text-sm text-gray-500">
-                                {pageSummary}
-                            </p>
-                        </div>
-                    </div>
-
-                    <div className="bg-white rounded-lg shadow-md p-4 md:p-6 border border-gray-200">
-                        {canCreate ? (
-                            <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-end">
+                        }
+                        actions={
+                            canCreate ? (
                                 <button
                                     type="button"
                                     onClick={openCreateModal}
                                     disabled={lookupLoading}
-                                    className="flex h-11 w-full items-center justify-center gap-2 rounded-xl border-2 border-gray-200 bg-green-600 px-4 font-bold text-white transition hover:bg-green-700 disabled:bg-green-300 md:w-auto"
+                                    className="btn-accent"
                                 >
                                     <FaPlusCircle size={18} />
-                                    {createConfig?.buttonLabel ?? "Add Record"}
+                                    {createConfig?.buttonLabel ??
+                                        "Add Record"}
                                 </button>
-                            </div>
-                        ) : null}
+                            ) : null
+                        }
+                    />
 
-                        <div className="bg-white rounded-md border border-gray-100 overflow-x-auto">
-                            <div className="w-full">
-                                <table className="table-auto border-collapse w-full text-left min-w-full hidden md:table rounded-lg overflow-hidden shadow-lg">
+                    <div className="cms-card overflow-hidden p-0">
+                        <div className="table-shell">
+                            <div className="table-scroll">
+                                <table className="table hidden md:table">
                                     <thead>
-                                        <tr className="bg-teal-600 text-white text-center">
+                                        <tr>
                                             {columns.map((column) => (
                                                 <th
                                                     key={column.header}
-                                                    className={`border border-gray-300 px-4 py-2 text-sm ${column.headerClassName ?? ""}`}
+                                                    className={
+                                                        column.headerClassName ??
+                                                        ""
+                                                    }
                                                 >
                                                     {column.header}
                                                 </th>
                                             ))}
                                             {isEditable ? (
-                                                <th className="border border-gray-300 px-4 py-2 text-sm">
-                                                    Action
+                                                <th className="w-24 text-center">
+                                                    Actions
                                                 </th>
                                             ) : null}
                                         </tr>
                                     </thead>
-
-                                    <tbody>
-                                        {records.data?.length > 0 ? (
-                                            records.data.map((record) => (
-                                                <tr
-                                                    key={record.id}
-                                                    className="rounded p-4 shadow bg-white text-center"
-                                                >
-                                                    {columns.map((column) => (
-                                                        <td
-                                                            key={`${record.id}-${column.header}`}
-                                                            className={`border border-gray-200 px-4 py-2 text-sm ${column.cellClassName ?? ""}`}
-                                                        >
-                                                            {column.render(
-                                                                record,
-                                                            )}
-                                                        </td>
-                                                    ))}
-                                                    {isEditable ? (
-                                                        <td className="border border-gray-200 px-4 py-2 text-sm">
-                                                            <div className="flex justify-center items-center gap-1">
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() =>
-                                                                        openEditModal(
-                                                                            record,
-                                                                        )
-                                                                    }
-                                                                >
-                                                                    <AiOutlineEdit
-                                                                        color="#00ABFF"
-                                                                        size={
-                                                                            24
-                                                                        }
-                                                                        className="cursor-pointer"
-                                                                    />
-                                                                </button>
-                                                                {canDelete ? (
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={() =>
-                                                                            handleDelete(
-                                                                                record,
-                                                                            )
-                                                                        }
-                                                                    >
-                                                                        <MdDeleteForever
-                                                                            color="#E63B60"
-                                                                            size={
-                                                                                24
-                                                                            }
-                                                                            className="cursor-pointer"
-                                                                        />
-                                                                    </button>
-                                                                ) : null}
-                                                            </div>
-                                                        </td>
-                                                    ) : null}
-                                                </tr>
-                                            ))
-                                        ) : (
-                                            <tr>
-                                                <td
-                                                    colSpan={
-                                                        columns.length +
-                                                        (isEditable ? 1 : 0)
-                                                    }
-                                                    className="text-center py-4 text-gray-500"
-                                                >
-                                                    {loading
-                                                        ? "Loading..."
-                                                        : `No ${emptyLabel} found.`}
-                                                </td>
-                                            </tr>
-                                        )}
-                                    </tbody>
+                                    <tbody>{tableBody()}</tbody>
                                 </table>
 
-                                <div className="md:hidden space-y-4 overflow-auto max-h-85 p-2">
-                                    {records.data?.length > 0 ? (
-                                        records.data.map((record) => (
-                                            <div
+                                {/* Card layout for small screens */}
+                                <div className="space-y-3 p-3 md:hidden">
+                                    {loading ? (
+                                        <LoadingState />
+                                    ) : listError ? (
+                                        <ErrorState
+                                            message={listError}
+                                            onRetry={() =>
+                                                loadRecords(1, search)
+                                            }
+                                        />
+                                    ) : !hasRows ? (
+                                        <EmptyState
+                                            message={
+                                                search
+                                                    ? `No ${emptyLabel} match the current search.`
+                                                    : `No ${emptyLabel} found.`
+                                            }
+                                        />
+                                    ) : (
+                                        rows.map((record) => (
+                                            <article
                                                 key={record.id}
-                                                className="border rounded p-4 shadow mb-2 bg-white"
+                                                className="rounded-control border border-slate-200 bg-white p-4 shadow-sm"
                                             >
                                                 {mobileFields.map((field) => (
                                                     <div
@@ -549,18 +582,18 @@ const CategoryRecordsPage = ({
                                                             "mt-3 first:mt-0"
                                                         }
                                                     >
-                                                        <span className="font-semibold text-sm">
-                                                            {field.label}:
-                                                        </span>{" "}
-                                                        <span className="text-sm">
+                                                        <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                                                            {field.label}
+                                                        </span>
+                                                        <div className="mt-1 text-sm text-slate-700">
                                                             {field.render(
                                                                 record,
                                                             )}
-                                                        </span>
+                                                        </div>
                                                     </div>
                                                 ))}
                                                 {isEditable ? (
-                                                    <div className="mt-4 flex items-center gap-3">
+                                                    <div className="mt-4 flex items-center gap-2 border-t border-slate-100 pt-3">
                                                         <button
                                                             type="button"
                                                             onClick={() =>
@@ -568,10 +601,10 @@ const CategoryRecordsPage = ({
                                                                     record,
                                                                 )
                                                             }
-                                                            className="flex items-center gap-2 text-sky-600"
+                                                            className="btn-secondary h-9 flex-1"
                                                         >
                                                             <AiOutlineEdit
-                                                                size={18}
+                                                                size={16}
                                                             />
                                                             Edit
                                                         </button>
@@ -579,147 +612,128 @@ const CategoryRecordsPage = ({
                                                             <button
                                                                 type="button"
                                                                 onClick={() =>
-                                                                    handleDelete(
+                                                                    setPendingDelete(
                                                                         record,
                                                                     )
                                                                 }
-                                                                className="flex items-center gap-2 text-rose-600"
+                                                                className="btn-icon-danger"
+                                                                aria-label={`Delete ${emptyLabel}`}
                                                             >
                                                                 <MdDeleteForever
-                                                                    size={18}
+                                                                    size={16}
                                                                 />
-                                                                Delete
                                                             </button>
                                                         ) : null}
                                                     </div>
                                                 ) : null}
-                                            </div>
+                                            </article>
                                         ))
-                                    ) : (
-                                        <p className="text-sm text-gray-500">
-                                            {loading
-                                                ? "Loading..."
-                                                : `No ${emptyLabel} found.`}
-                                        </p>
                                     )}
                                 </div>
-
-                                <div className="flex justify-center items-center gap-2 mt-4">
-                                    <button
-                                        type="button"
-                                        onClick={() =>
-                                            handlePageChange(
-                                                records.current_page - 1,
-                                            )
-                                        }
-                                        disabled={!records.prev_page_url}
-                                        className={`px-3 py-1 rounded ${
-                                            records.prev_page_url
-                                                ? "bg-blue-500 text-white hover:bg-blue-600"
-                                                : "bg-gray-300 text-gray-500 cursor-not-allowed"
-                                        }`}
-                                    >
-                                        Prev
-                                    </button>
-
-                                    <span className="text-sm text-gray-700">
-                                        Page {records.current_page} of{" "}
-                                        {records.last_page}
-                                    </span>
-
-                                    <button
-                                        type="button"
-                                        onClick={() =>
-                                            handlePageChange(
-                                                records.current_page + 1,
-                                            )
-                                        }
-                                        disabled={!records.next_page_url}
-                                        className={`px-3 py-1 rounded ${
-                                            records.next_page_url
-                                                ? "bg-blue-500 text-white hover:bg-blue-600"
-                                                : "bg-gray-300 text-gray-500 cursor-not-allowed"
-                                        }`}
-                                    >
-                                        Next
-                                    </button>
-                                </div>
                             </div>
+                        </div>
+
+                        <div className="px-4 pb-4 pt-1 md:px-6">
+                            <p className="py-2 text-xs font-medium text-slate-500">
+                                {rowSummary}
+                            </p>
+                            <Pagination
+                                page={records.current_page}
+                                lastPage={records.last_page}
+                                hasPrev={Boolean(records.prev_page_url)}
+                                hasNext={Boolean(records.next_page_url)}
+                                onChange={handlePageChange}
+                            />
                         </div>
                     </div>
                 </div>
             </div>
 
-            <Modal show={modalOpen} onClose={closeModal} maxWidth="2xl">
+            {/* Record form */}
+            <Modal
+                show={modalOpen}
+                onClose={closeModal}
+                maxWidth="2xl"
+            >
                 <form
                     onSubmit={handleSubmit}
-                    className="flex max-h-[88vh] flex-col bg-white"
+                    className="modal-panel rounded-none"
                 >
-                    <div className="flex items-start justify-between gap-4 border-b border-gray-200 px-4 py-4 sm:px-6">
+                    <div className="modal-header">
                         <div>
-                            <h2 className="text-lg font-semibold text-gray-800 sm:text-xl">
+                            <h2 className="modal-title">
                                 {editingRecord
-                                    ? (editConfig?.modalTitle ?? `Edit ${title}`)
+                                    ? (editConfig?.modalTitle ??
+                                      `Edit ${title}`)
                                     : (createConfig?.modalTitle ??
                                       `New ${title}`)}
                             </h2>
-                            <p className="mt-1 text-sm text-gray-500">
-                                Update the selected record without leaving this
-                                page.
+                            <p className="mt-1 text-sm text-slate-500">
+                                Fields marked with an asterisk are required.
                             </p>
                         </div>
 
                         <button
                             type="button"
                             onClick={closeModal}
-                            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-gray-200 text-lg text-gray-500 transition hover:bg-gray-100 hover:text-gray-700"
+                            className="btn-icon-secondary shrink-0"
+                            aria-label="Close"
                         >
-                            x
+                            &times;
                         </button>
                     </div>
 
-                    <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-6">
-                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                            {(
-                                editingRecord
-                                    ? (editConfig?.fields ?? [])
-                                    : (createConfig?.fields ??
-                                      editConfig?.fields ??
-                                      [])
-                            ).map((field) => {
-                                const isTextArea = field.type === "textarea";
+                    <div className="modal-body">
+                        <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+                            {activeFields.map((field) => {
                                 const isSelect = field.type === "select";
                                 const isFile = field.type === "file";
-                                const isRichText = field.type === "ckeditor";
+                                const isRichText =
+                                    field.type === "ckeditor";
+                                const isTextArea =
+                                    field.type === "textarea";
                                 const fieldValue = form[field.name] ?? "";
                                 const wrapperClassName =
                                     field.fullWidth === false
                                         ? ""
                                         : "md:col-span-2";
                                 const existingImage =
-                                    field.previewValue?.(editingRecord) ??
-                                    editingRecord?.[field.previewKey ?? ""];
+                                    field.previewValue?.(
+                                        editingRecord,
+                                    ) ??
+                                    editingRecord?.[
+                                        field.previewKey ?? ""
+                                    ];
 
                                 return (
                                     <div
                                         key={field.name}
                                         className={wrapperClassName}
                                     >
-                                        <label className="block mb-1">
-                                            {field.label}:
+                                        <label
+                                            className="label"
+                                            htmlFor={`field-${field.name}`}
+                                        >
+                                            {field.label}
+                                            {field.required ? (
+                                                <span className="ml-0.5 text-rose-500">
+                                                    *
+                                                </span>
+                                            ) : null}
                                         </label>
 
                                         {isSelect ? (
                                             <select
+                                                id={`field-${field.name}`}
                                                 name={field.name}
                                                 value={fieldValue}
                                                 onChange={handleChange}
                                                 disabled={lookupLoading}
-                                                className="w-full border border-gray-300 rounded-md p-2 focus:ring-2 focus:ring-blue-500 focus:outline-none disabled:bg-gray-100"
+                                                className="select"
                                             >
                                                 <option value="">
                                                     {field.placeholder ??
-                                                        "Select option"}
+                                                        "Select an area"}
                                                 </option>
                                                 {areas.map((area) => (
                                                     <option
@@ -731,19 +745,26 @@ const CategoryRecordsPage = ({
                                                 ))}
                                             </select>
                                         ) : isRichText ? (
-                                            <div className="overflow-hidden rounded-md border border-gray-300">
+                                            <div className="overflow-hidden rounded-control border border-slate-300">
                                                 <CKEditor
-                                                    key={`${editingRecord?.id ?? "new"}-${field.name}`}
+                                                    key={`${
+                                                        editingRecord?.id ??
+                                                        "new"
+                                                    }-${field.name}`}
                                                     editor={ClassicEditor}
                                                     config={editorConfig}
                                                     data={fieldValue}
-                                                    onChange={(_, editor) => {
-                                                        const data =
-                                                            editor.getData();
-                                                        setForm((current) => ({
-                                                            ...current,
-                                                            [field.name]: data,
-                                                        }));
+                                                    onChange={(
+                                                        _,
+                                                        editor,
+                                                    ) => {
+                                                        setForm(
+                                                            (current) => ({
+                                                                ...current,
+                                                                [field.name]:
+                                                                    editor.getData(),
+                                                            }),
+                                                        );
                                                         setErrors(
                                                             (current) => ({
                                                                 ...current,
@@ -756,66 +777,92 @@ const CategoryRecordsPage = ({
                                             </div>
                                         ) : isTextArea ? (
                                             <textarea
+                                                id={`field-${field.name}`}
                                                 name={field.name}
                                                 value={fieldValue}
                                                 onChange={handleChange}
                                                 rows={field.rows ?? 5}
                                                 placeholder={
-                                                    field.placeholder ?? ""
+                                                    field.placeholder ??
+                                                    ""
                                                 }
-                                                className="w-full border border-gray-300 rounded-md p-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                                                className="input"
                                             />
                                         ) : isFile ? (
-                                            <input
-                                                name={field.name}
-                                                type="file"
-                                                accept={
-                                                    field.accept ??
-                                                    ".jpg,.jpeg,.png,.webp,.gif"
-                                                }
-                                                onChange={handleChange}
-                                                className="w-full border border-gray-300 rounded-md p-2"
-                                            />
+                                            <>
+                                                <input
+                                                    id={`field-${field.name}`}
+                                                    name={field.name}
+                                                    type="file"
+                                                    accept={
+                                                        field.accept ??
+                                                        ".jpg,.jpeg,.png,.webp,.gif"
+                                                    }
+                                                    onChange={
+                                                        handleChange
+                                                    }
+                                                    className="input file:mr-3 file:rounded-control file:border-0 file:bg-slate-100 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-slate-700 hover:file:bg-slate-200"
+                                                />
+                                                {field.hint ? (
+                                                    <p className="field-hint">
+                                                        {field.hint}
+                                                    </p>
+                                                ) : null}
+                                            </>
                                         ) : (
                                             <input
+                                                id={`field-${field.name}`}
                                                 name={field.name}
                                                 value={fieldValue}
                                                 onChange={handleChange}
-                                                type={field.type ?? "text"}
-                                                placeholder={
-                                                    field.placeholder ?? ""
+                                                type={
+                                                    field.type ?? "text"
                                                 }
-                                                className="w-full border border-gray-300 rounded-md p-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                                                placeholder={
+                                                    field.placeholder ??
+                                                    ""
+                                                }
+                                                className="input"
                                             />
                                         )}
 
                                         {field.previewImage ? (
-                                            form[field.name] ? (
-                                                <div className="mt-2">
-                                                    <p className="text-sm text-gray-500">
+                                            <div className="mt-3">
+                                                {form[field.name] ? (
+                                                    <p className="field-hint">
                                                         New file:{" "}
-                                                        {form[field.name].name}
+                                                        {
+                                                            form[field.name]
+                                                                .name
+                                                        }
                                                     </p>
-                                                </div>
-                                            ) : existingImage ? (
-                                                <img
-                                                    src={`/storage/images/${existingImage}`}
-                                                    alt={
-                                                        editingRecord?.areaName ??
-                                                        title
-                                                    }
-                                                    className="mt-3 h-28 w-full max-w-xs object-cover rounded border border-gray-200"
-                                                />
-                                            ) : (
-                                                <p className="mt-2 text-sm text-gray-500">
-                                                    No image preview available.
-                                                </p>
-                                            )
+                                                ) : existingImage ? (
+                                                    <img
+                                                        src={`/storage/images/${existingImage}`}
+                                                        alt={
+                                                            editingRecord?.areaName ??
+                                                            title
+                                                        }
+                                                        className="h-28 w-full max-w-xs rounded-control border border-slate-200 object-cover"
+                                                    />
+                                                ) : (
+                                                    <p className="field-hint">
+                                                        No image preview
+                                                        available.
+                                                    </p>
+                                                )}
+                                            </div>
                                         ) : null}
 
                                         {errors[field.name] ? (
-                                            <p className="text-red-500 text-sm mt-1">
-                                                {errors[field.name][0]}
+                                            <p className="field-error">
+                                                {Array.isArray(
+                                                    errors[field.name],
+                                                )
+                                                    ? errors[
+                                                          field.name
+                                                      ][0]
+                                                    : errors[field.name]}
                                             </p>
                                         ) : null}
                                     </div>
@@ -824,28 +871,42 @@ const CategoryRecordsPage = ({
                         </div>
                     </div>
 
-                    <div className="flex flex-col-reverse gap-2 border-t border-gray-200 bg-gray-50 px-4 py-4 sm:flex-row sm:justify-end sm:px-6">
+                    <div className="modal-footer">
                         <button
                             type="button"
                             onClick={closeModal}
-                            className="rounded-lg border border-gray-300 px-6 py-2 font-medium text-gray-700"
+                            className="btn-secondary"
                         >
                             Cancel
                         </button>
                         <button
                             type="submit"
                             disabled={submitting}
-                            className="rounded-lg bg-blue-600 px-6 py-2 font-medium text-white transition hover:bg-blue-700 disabled:bg-blue-300"
+                            className="btn-primary"
                         >
                             {submitting
                                 ? "Saving..."
                                 : editingRecord
                                   ? "Update"
-                                  : (createConfig?.submitLabel ?? "Save")}
+                                  : (createConfig?.submitLabel ??
+                                    "Save")}
                         </button>
                     </div>
                 </form>
             </Modal>
+
+            <ConfirmDialog
+                open={Boolean(pendingDelete)}
+                busy={deleting}
+                title="Delete record"
+                message={
+                    deleteConfig?.confirmMessage?.(pendingDelete) ??
+                    `This ${emptyLabel} will be permanently deleted.`
+                }
+                confirmLabel="Delete"
+                onConfirm={confirmDelete}
+                onCancel={() => setPendingDelete(null)}
+            />
         </>
     );
 };

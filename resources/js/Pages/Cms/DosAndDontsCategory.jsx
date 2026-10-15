@@ -27,9 +27,9 @@ const DosAndDontsCategory = () => {
         <>
             <Head title="Do's and Don'ts Category" />
 
-            <div className="min-h-screen bg-slate-100">
-                <div className="w-full px-4 py-6 md:px-8">
-                    <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+            <div className="cms-shell">
+                <div className="cms-container">
+                    <div className="cms-card p-6">
                         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                             <div>
                                 <h1 className="text-xl font-semibold text-gray-800 md:text-2xl">
@@ -44,7 +44,7 @@ const DosAndDontsCategory = () => {
 
                             <button
                                 type="button"
-                                className="flex h-11 w-full items-center justify-center gap-2 rounded-xl border-2 border-gray-200 bg-green-600 px-4 font-bold text-white transition hover:bg-green-700 md:w-auto"
+                                className="btn-accent"
                             >
                                 <FaPlusCircle size={18} />
                                 Add Reminder
@@ -58,7 +58,7 @@ const DosAndDontsCategory = () => {
                                 <h2 className="text-lg font-semibold text-gray-800">
                                     Placeholder Preview
                                 </h2>
-                                <p className="mt-1 text-sm text-gray-500">
+                                <p className="cms-page-description">
                                     This layout is ready for CRUD wiring once
                                     the table and fields are finalized.
                                 </p>
@@ -67,24 +67,24 @@ const DosAndDontsCategory = () => {
                             <input
                                 type="text"
                                 placeholder="Search reminders..."
-                                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 md:w-80"
+                                className="input md:w-80"
                             />
                         </div>
 
-                        <div className="mt-5 hidden overflow-x-auto rounded-lg border border-gray-100 md:block">
-                            <table className="min-w-full border-collapse text-left">
+                        <div className="table-shell table-scroll">
+                            <table className="table">
                                 <thead>
-                                    <tr className="bg-teal-600 text-center text-white">
-                                        <th className="border border-gray-300 px-4 py-3 text-sm">
+                                    <tr>
+                                        <th>
                                             Area
                                         </th>
-                                        <th className="border border-gray-300 px-4 py-3 text-sm">
+                                        <th>
                                             Type
                                         </th>
-                                        <th className="border border-gray-300 px-4 py-3 text-sm">
+                                        <th>
                                             Title
                                         </th>
-                                        <th className="border border-gray-300 px-4 py-3 text-sm">
+                                        <th>
                                             Description
                                         </th>
                                     </tr>
@@ -93,12 +93,12 @@ const DosAndDontsCategory = () => {
                                     {sampleItems.map((item) => (
                                         <tr
                                             key={item.id}
-                                            className="bg-white text-center"
+                                            
                                         >
-                                            <td className="border border-gray-200 px-4 py-3 text-sm">
+                                            <td>
                                                 {item.area}
                                             </td>
-                                            <td className="border border-gray-200 px-4 py-3 text-sm">
+                                            <td>
                                                 <span
                                                     className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
                                                         item.type === "Do"

@@ -15,8 +15,8 @@ import {
     BlockQuote,
     Undo,
 } from "ckeditor5";
-import { MdDeleteForever } from "react-icons/md";
-import { AiOutlineEdit } from "react-icons/ai";
+import ConfirmDialog from "@/Components/ConfirmDialog";
+import RowActions from "@/Components/RowActions";
 import { FaPlusCircle } from "react-icons/fa";
 import axios from "axios";
 
@@ -80,6 +80,7 @@ const AboutCategory = () => {
     const [modalOpen, setModalOpen] = useState(false);
     const [submitting, setSubmitting] = useState(false);
     const [editingRecord, setEditingRecord] = useState(null);
+    const [pendingDelete, setPendingDelete] = useState(null);
     const [form, setForm] = useState(emptyForm);
     const [errors, setErrors] = useState({});
 
@@ -90,6 +91,7 @@ const AboutCategory = () => {
                 params: { page, search: keyword, per_page: 10 },
             });
             setRecords(res.data);
+            setPendingDelete(null);
         } catch (error) {
             console.error("Error loading about content:", error);
         } finally {
@@ -217,15 +219,11 @@ const AboutCategory = () => {
         }
     };
 
+    const requestDelete = (record) => {
+        setPendingDelete(record);
+    };
+
     const handleDelete = async (record) => {
-        const confirmed = window.confirm(
-            `Delete "${record.areaName} / ${tabLabels[record.tabID] ?? `Tab ${record.tabID}`}"?`,
-        );
-
-        if (!confirmed) {
-            return;
-        }
-
         try {
             await axios.delete(`/deleteContentAbout/${record.id}`);
 
@@ -269,14 +267,14 @@ const AboutCategory = () => {
     return (
         <>
             <Head title="About Category" />
-            <div className="min-h-screen flex flex-col items-center justify-start">
-                <div className="w-full md:px-8 px-4 py-6">
-                    <div className="flex flex-col gap-3 md:flex-row justify-between items-center bg-white shadow-sm rounded-md md:p-6 p-4 mb-4 border border-gray-200">
+            <div className="cms-shell">
+                <div className="cms-container">
+                    <div className="cms-card mb-5 flex flex-col gap-4 p-5 md:flex-row md:items-start md:justify-between md:p-6">
                         <div>
-                            <h3 className="text-lg md:text-xl font-semibold text-gray-800">
+                            <h3 className="cms-page-title">
                                 About Category
                             </h3>
-                            <p className="text-sm text-gray-500 mt-1">
+                            <p className="cms-page-description">
                                 Manage About, History, and How to Get There
                                 content for each protected area.
                             </p>
@@ -288,7 +286,7 @@ const AboutCategory = () => {
                                 value={searchInput}
                                 onChange={(e) => setSearchInput(e.target.value)}
                                 placeholder="Search by area, tab, or content..."
-                                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-400 focus:outline-none"
+                                className="input"
                             />
                             <p className="mt-2 text-sm text-gray-500">
                                 {pageSummary}
@@ -302,34 +300,34 @@ const AboutCategory = () => {
                                 type="button"
                                 onClick={openCreateModal}
                                 disabled={lookupLoading}
-                                className="md:max-w-44 md:w-full w-full h-12 bg-green-600 hover:bg-green-700 disabled:bg-green-300 border-2 text-white border-gray-200 rounded-xl py-2 font-bold flex flex-row justify-center items-center gap-3"
+                                className="btn-accent"
                             >
                                 <FaPlusCircle size={18} />
                                 Add Content
                             </button>
                         </div> */}
 
-                        <div className="bg-white rounded-md border border-gray-100 overflow-x-auto">
+                        <div className="table-shell table-scroll">
                             <div className="w-full">
-                                <table className="table-auto border-collapse w-full text-left min-w-full hidden md:table rounded-lg overflow-hidden shadow-lg">
+                                <table className="table hidden md:table">
                                     <thead>
-                                        <tr className="bg-teal-600 text-white text-center">
-                                            <th className="border border-gray-300 px-4 py-2 text-sm">
+                                        <tr>
+                                            <th>
                                                 Area Name
                                             </th>
-                                            <th className="border border-gray-300 px-4 py-2 text-sm">
+                                            <th>
                                                 Tab
                                             </th>
-                                            <th className="border border-gray-300 px-4 py-2 text-sm">
+                                            <th>
                                                 Content
                                             </th>
-                                            <th className="border border-gray-300 px-4 py-2 text-sm">
+                                            <th>
                                                 Image 1
                                             </th>
-                                            <th className="border border-gray-300 px-4 py-2 text-sm">
+                                            <th>
                                                 Image 2
                                             </th>
-                                            <th className="border border-gray-300 px-4 py-2 text-sm">
+                                            <th>
                                                 Action
                                             </th>
                                         </tr>
@@ -340,12 +338,12 @@ const AboutCategory = () => {
                                             records.data.map((record) => (
                                                 <tr
                                                     key={record.id}
-                                                    className="rounded p-4 shadow bg-white text-center"
+                                                    
                                                 >
-                                                    <td className="border border-gray-200 px-4 py-2 text-sm">
+                                                    <td>
                                                         {record.areaName ?? "-"}
                                                     </td>
-                                                    <td className="border border-gray-200 px-4 py-2 text-sm">
+                                                    <td>
                                                         {tabLabels[
                                                             record.tabID
                                                         ] ??
@@ -356,7 +354,7 @@ const AboutCategory = () => {
                                                             ? `${record.content.slice(0, 180)}${record.content.length > 180 ? "..." : ""}`
                                                             : "-"}
                                                     </td>
-                                                    <td className="border border-gray-200 px-4 py-2 text-sm">
+                                                    <td>
                                                         {record.imagePath1 ? (
                                                             <img
                                                                 src={`/storage/images/${record.imagePath1}`}
@@ -367,7 +365,7 @@ const AboutCategory = () => {
                                                             "No Image"
                                                         )}
                                                     </td>
-                                                    <td className="border border-gray-200 px-4 py-2 text-sm">
+                                                    <td>
                                                         {record.imagePath2 ? (
                                                             <img
                                                                 src={`/storage/images/${record.imagePath2}`}
@@ -378,38 +376,22 @@ const AboutCategory = () => {
                                                             "No Image"
                                                         )}
                                                     </td>
-                                                    <td className="border border-gray-200 px-4 py-2 text-sm">
-                                                        <div className="flex justify-center items-center gap-1">
-                                                            <button
-                                                                type="button"
-                                                                onClick={() =>
-                                                                    openEditModal(
-                                                                        record,
-                                                                    )
-                                                                }
-                                                            >
-                                                                <AiOutlineEdit
-                                                                    color="#00ABFF"
-                                                                    size={24}
-                                                                    className="cursor-pointer"
-                                                                />
-                                                            </button>
-                                                            {/* <button
-                                                                type="button"
-                                                                onClick={() =>
-                                                                    handleDelete(
-                                                                        record,
-                                                                    )
-                                                                }
-                                                            >
-                                                                <MdDeleteForever
-                                                                    color="#E63B60"
-                                                                    size={24}
-                                                                    className="cursor-pointer"
-                                                                />
-                                                            </button> */}
-                                                        </div>
-                                                    </td>
+                                                    <td>
+                                                        <RowActions
+                                        variant="icon"
+                                        itemLabel="content"
+                                        showDelete={false}
+                                        onEdit={() =>
+                                            openEditModal(
+                                                record,
+                                            )
+                                        }
+                                        onDelete={() =>
+                                            requestDelete(
+                                                record,
+                                            )
+                                        }
+                                    /></td>
                                                 </tr>
                                             ))
                                         ) : (
@@ -427,12 +409,12 @@ const AboutCategory = () => {
                                     </tbody>
                                 </table>
 
-                                <div className="md:hidden space-y-4 overflow-auto max-h-85 p-2">
+                                <div className="md:hidden space-y-4 overflow-auto max-h-[21rem] p-2">
                                     {records?.data?.length > 0 ? (
                                         records.data.map((item) => (
                                             <div
                                                 key={item.id}
-                                                className="border rounded p-4 shadow mb-2 bg-white"
+                                                className="mb-2 rounded-card border border-slate-200 bg-white p-4 shadow-card"
                                             >
                                                 <p className="text-sm">
                                                     <span className="font-semibold">
@@ -482,32 +464,17 @@ const AboutCategory = () => {
                                                     )}
                                                 </div>
 
-                                                <div className="mt-4 flex items-center gap-3">
-                                                    <button
-                                                        type="button"
-                                                        onClick={() =>
-                                                            openEditModal(item)
-                                                        }
-                                                        className="flex items-center gap-2 text-sky-600"
-                                                    >
-                                                        <AiOutlineEdit
-                                                            size={18}
-                                                        />
-                                                        Edit
-                                                    </button>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() =>
-                                                            handleDelete(item)
-                                                        }
-                                                        className="flex items-center gap-2 text-red-500"
-                                                    >
-                                                        <MdDeleteForever
-                                                            size={18}
-                                                        />
-                                                        Delete
-                                                    </button>
-                                                </div>
+                                                <RowActions
+                                        variant="labelled"
+                                        itemLabel="content"
+                                        showDelete={true}
+                                        onEdit={() =>
+                                            openEditModal(item)
+                                        }
+                                        onDelete={() =>
+                                            requestDelete(item)
+                                        }
+                                    />
                                             </div>
                                         ))
                                     ) : (
@@ -589,7 +556,7 @@ const AboutCategory = () => {
                                     name="areaID"
                                     value={form.areaID}
                                     onChange={handleChange}
-                                    className="w-full border border-gray-300 rounded-md p-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                                    className="input"
                                 >
                                     <option value="">Select area</option>
                                     {areas.map((area) => (
@@ -611,7 +578,7 @@ const AboutCategory = () => {
                                     name="tabID"
                                     value={form.tabID}
                                     onChange={handleChange}
-                                    className="w-full border border-gray-300 rounded-md p-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                                    className="input"
                                 >
                                     <option value="">Select tab</option>
                                     {Object.entries(tabLabels).map(
@@ -727,14 +694,14 @@ const AboutCategory = () => {
                             <button
                                 type="button"
                                 onClick={closeModal}
-                                className="px-6 py-2 border border-gray-300 text-gray-700 font-medium rounded-lg"
+                                className="btn-secondary"
                             >
                                 Cancel
                             </button>
                             <button
                                 type="submit"
                                 disabled={submitting}
-                                className="px-6 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 disabled:bg-blue-300 transition"
+                                className="btn-primary"
                             >
                                 {submitting
                                     ? "Saving..."
@@ -746,6 +713,23 @@ const AboutCategory = () => {
                     </div>
                 </form>
             </Modal>
+
+            <ConfirmDialog
+                open={Boolean(pendingDelete)}
+                title="Delete content"
+                message={
+                    pendingDelete
+                        ? `Delete "${record.areaName} / ${tabLabels[record.tabID] ?? `Tab ${record.tabID}`}"?`
+                        : null
+                }
+                confirmLabel="Delete"
+                onConfirm={() => {
+                    if (pendingDelete) {
+                        handleDelete(pendingDelete);
+                    }
+                }}
+                onCancel={() => setPendingDelete(null)}
+            />
         </>
     );
 };

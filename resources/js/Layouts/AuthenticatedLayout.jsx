@@ -24,8 +24,9 @@ export default function Authenticated({ children }) {
     return (
         <div className="min-h-screen bg-gray-100">
             <aside
-                className={` fixed border-r   border-gray-200  top-0 left-0 z-40 w-64 h-screen transition-transform bg-blue-50 text-white dark:text-white
-            ${isOpen ? "translate-x-0" : "-translate-x-full"}`}
+                className={`fixed left-0 top-0 z-40 h-screen w-64 border-r border-slate-200 bg-slate-50 transition-transform ${
+                    isOpen ? "translate-x-0" : "-translate-x-full"
+                }`}
                 id="logo-sidebar"
             >
                 <SidebarNavigation />
@@ -36,53 +37,61 @@ export default function Authenticated({ children }) {
                     isOpen ? "md:ml-64" : "ml-0"
                 }`}
             >
-                <nav className="bg-teal-600  to-white border-b border-gray-100  md:static fixed w-full ">
-                    <div className="max-w-8xl mx-auto px-4 sm:px-6 lg:px-8">
-                        <div className="flex justify-between gap-4 h-16">
+                <nav className="fixed w-full border-b border-brand-700 bg-brand-600 md:static">
+                    <div className="mx-auto max-w-8xl px-4 sm:px-6 lg:px-8">
+                        <div className="flex h-16 items-center justify-between gap-4">
                             {/* Sidebar Toggle (Desktop) */}
-                            <div className="hidden md:block mt-4">
-                                {isOpen ? (
-                                    <HiMenuAlt1
-                                        className="text-white cursor-pointer "
-                                        size={28}
-                                        onClick={() => setIsOpen(false)}
-                                    />
-                                ) : (
-                                    <HiMenu
-                                        className="text-white cursor-pointer"
-                                        size={28}
-                                        onClick={() => setIsOpen(true)}
-                                    />
-                                )}
+                            <div className="mt-4 hidden md:block">
+                                <button
+                                    type="button"
+                                    onClick={() => setIsOpen(!isOpen)}
+                                    className="rounded-md p-1 text-white transition hover:bg-brand-700"
+                                    aria-label={
+                                        isOpen
+                                            ? "Collapse sidebar"
+                                            : "Expand sidebar"
+                                    }
+                                    aria-expanded={isOpen}
+                                >
+                                    {isOpen ? (
+                                        <HiMenuAlt1 size={28} />
+                                    ) : (
+                                        <HiMenu size={28} />
+                                    )}
+                                </button>
                             </div>
 
                             {/* Title (Mobile) */}
-                            <div className="md:hidden flex items-center gap-2 text-center">
+                            <div className="flex items-center gap-2 text-center md:hidden">
                                 <img
                                     src={ApplicationLogo}
                                     width={34}
                                     alt="STARBOOKS Nature"
                                 />
-                                <span className="text-lg text-green-950 font-semibold ">
+                                <span className="text-lg font-semibold text-white">
                                     Admin Dashboard
                                 </span>
                             </div>
 
                             {/* Sidebar Toggle (Mobile) */}
-                            <div className="md:hidden block mt-4">
-                                {isOpen ? (
-                                    <HiMenuAlt1
-                                        className="text-green-950 cursor-pointer"
-                                        size={28}
-                                        onClick={() => setIsOpen(false)}
-                                    />
-                                ) : (
-                                    <HiMenu
-                                        className="text-green-950 cursor-pointer"
-                                        size={28}
-                                        onClick={() => setIsOpen(true)}
-                                    />
-                                )}
+                            <div className="mt-4 block md:hidden">
+                                <button
+                                    type="button"
+                                    onClick={() => setIsOpen(!isOpen)}
+                                    className="rounded-md p-1 text-white transition hover:bg-brand-700"
+                                    aria-label={
+                                        isOpen
+                                            ? "Close navigation"
+                                            : "Open navigation"
+                                    }
+                                    aria-expanded={isOpen}
+                                >
+                                    {isOpen ? (
+                                        <HiMenuAlt1 size={28} />
+                                    ) : (
+                                        <HiMenu size={28} />
+                                    )}
+                                </button>
                             </div>
 
                             {/* PROFILE DROPDOWN */}

@@ -2,8 +2,8 @@ import React, { useEffect, useMemo, useState } from "react";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
 import { Head } from "@inertiajs/react";
 import Modal from "@/Components/Modal";
-import { AiOutlineEdit } from "react-icons/ai";
-import { MdDeleteForever } from "react-icons/md";
+import ConfirmDialog from "@/Components/ConfirmDialog";
+import RowActions from "@/Components/RowActions";
 import { FaPlusCircle } from "react-icons/fa";
 import axios from "axios";
 
@@ -40,6 +40,7 @@ const QuizCategory = () => {
     const [modalOpen, setModalOpen] = useState(false);
     const [submitting, setSubmitting] = useState(false);
     const [editingRecord, setEditingRecord] = useState(null);
+    const [pendingDelete, setPendingDelete] = useState(null);
     const [form, setForm] = useState(emptyForm);
     const [errors, setErrors] = useState({});
     const [questionImagePreview, setQuestionImagePreview] = useState("");
@@ -180,13 +181,11 @@ const QuizCategory = () => {
         }
     };
 
+    const requestDelete = (record) => {
+        setPendingDelete(record);
+    };
+
     const handleDelete = async (record) => {
-        const confirmed = window.confirm(`Delete quiz question #${record.id}?`);
-
-        if (!confirmed) {
-            return;
-        }
-
         try {
             await axios.delete(`/deleteQuizItem/${record.id}`);
 
@@ -196,6 +195,7 @@ const QuizCategory = () => {
                     : records.current_page;
 
             await loadQuizItems(nextPage, search);
+            setPendingDelete(null);
         } catch (error) {
             console.error("Error deleting quiz item:", error);
             window.alert(
@@ -231,14 +231,14 @@ const QuizCategory = () => {
         <>
             <Head title="Quiz CMS" />
 
-            <div className="min-h-screen bg-slate-100">
-                <div className="w-full px-4 py-6 md:px-8">
-                    <div className="mb-4 flex flex-col gap-3 rounded-md border border-gray-200 bg-white p-4 shadow-sm md:flex-row md:items-center md:justify-between md:p-6">
+            <div className="cms-shell">
+                <div className="cms-container">
+                    <div className="cms-card mb-5 flex flex-col gap-4 p-5 md:flex-row md:items-start md:justify-between md:p-6">
                         <div>
-                            <h3 className="text-lg font-semibold text-gray-800 md:text-xl">
+                            <h3 className="cms-page-title">
                                 Quiz CMS
                             </h3>
-                            <p className="mt-1 text-sm text-gray-500">
+                            <p className="cms-page-description">
                                 Manage quiz questions, choices, correct answers,
                                 difficulty levels, and question image URLs.
                             </p>
@@ -252,7 +252,7 @@ const QuizCategory = () => {
                                     setSearchInput(event.target.value)
                                 }
                                 placeholder="Search quiz questions or choices..."
-                                className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                                className="input"
                             />
                             <p className="mt-2 text-sm text-gray-500">
                                 {pageSummary}
@@ -265,33 +265,33 @@ const QuizCategory = () => {
                             <button
                                 type="button"
                                 onClick={openCreateModal}
-                                className="flex h-12 w-full items-center justify-center gap-3 rounded-xl border-2 bg-green-600 px-5 font-bold text-white hover:bg-green-700 md:w-auto"
+                                className="btn-accent"
                             >
                                 <FaPlusCircle size={20} />
                                 Add Question
                             </button>
                         </div>
 
-                        <div className="overflow-x-auto rounded-md border border-gray-100 bg-white">
-                            <table className="hidden min-w-full table-auto border-collapse text-left md:table">
+                        <div className="table-shell table-scroll">
+                            <table className="table hidden md:table">
                                 <thead>
-                                    <tr className="bg-teal-600 text-center text-white">
-                                        <th className="border border-gray-300 px-4 py-2 text-sm">
+                                    <tr>
+                                        <th>
                                             ID
                                         </th>
-                                        <th className="border border-gray-300 px-4 py-2 text-sm">
+                                        <th>
                                             Difficulty
                                         </th>
-                                        <th className="border border-gray-300 px-4 py-2 text-sm">
+                                        <th>
                                             Question
                                         </th>
-                                        <th className="border border-gray-300 px-4 py-2 text-sm">
+                                        <th>
                                             Choices
                                         </th>
-                                        <th className="border border-gray-300 px-4 py-2 text-sm">
+                                        <th>
                                             Answer
                                         </th>
-                                        <th className="border border-gray-300 px-4 py-2 text-sm">
+                                        <th>
                                             Action
                                         </th>
                                     </tr>
@@ -302,12 +302,12 @@ const QuizCategory = () => {
                                         records.data.map((record) => (
                                             <tr
                                                 key={record.id}
-                                                className="bg-white text-center"
+                                                
                                             >
-                                                <td className="border border-gray-200 px-4 py-2 text-sm">
+                                                <td>
                                                     {record.id}
                                                 </td>
-                                                <td className="border border-gray-200 px-4 py-2 text-sm">
+                                                <td>
                                                     {record.level_of_difficulty}
                                                 </td>
                                                 <td className="border border-gray-200 px-4 py-2 text-left text-sm">
@@ -357,41 +357,17 @@ const QuizCategory = () => {
                                                         {record.choice4_text}
                                                     </p>
                                                 </td>
-                                                <td className="border border-gray-200 px-4 py-2 text-sm">
+                                                <td>
                                                     {record.answer_key}
                                                 </td>
-                                                <td className="border border-gray-200 px-4 py-2 text-sm">
-                                                    <div className="flex items-center justify-center gap-1">
-                                                        <button
-                                                            type="button"
-                                                            onClick={() =>
-                                                                openEditModal(
-                                                                    record,
-                                                                )
-                                                            }
-                                                        >
-                                                            <AiOutlineEdit
-                                                                color="#00ABFF"
-                                                                size={24}
-                                                                className="cursor-pointer"
-                                                            />
-                                                        </button>
-                                                        <button
-                                                            type="button"
-                                                            onClick={() =>
-                                                                handleDelete(
-                                                                    record,
-                                                                )
-                                                            }
-                                                        >
-                                                            <MdDeleteForever
-                                                                color="#E63B60"
-                                                                size={24}
-                                                                className="cursor-pointer"
-                                                            />
-                                                        </button>
-                                                    </div>
-                                                </td>
+                                                <td>
+                                                    <RowActions
+                            variant="icon"
+                            itemLabel="quiz question"
+                            showDelete={true}
+                            onEdit={() => openEditModal(record)}
+                            onDelete={() => requestDelete(record)}
+                        /></td>
                                             </tr>
                                         ))
                                     ) : (
@@ -485,30 +461,17 @@ const QuizCategory = () => {
                                                 </span>{" "}
                                                 {record.answer_key}
                                             </p>
-                                            <div className="mt-3 flex items-center gap-3">
-                                                <button
-                                                    type="button"
-                                                    onClick={() =>
-                                                        openEditModal(record)
-                                                    }
-                                                    className="flex items-center gap-2 text-sky-600"
-                                                >
-                                                    <AiOutlineEdit size={18} />
-                                                    Edit
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    onClick={() =>
-                                                        handleDelete(record)
-                                                    }
-                                                    className="flex items-center gap-2 text-red-500"
-                                                >
-                                                    <MdDeleteForever
-                                                        size={18}
-                                                    />
-                                                    Delete
-                                                </button>
-                                            </div>
+                                            <RowActions
+                                            variant="labelled"
+                                            itemLabel="quiz question"
+                                            showDelete={true}
+                                            onEdit={() =>
+                                                openEditModal(record)
+                                            }
+                                            onDelete={() =>
+                                                requestDelete(record)
+                                            }
+                                        />
                                         </div>
                                     ))
                                 ) : (
@@ -592,7 +555,7 @@ const QuizCategory = () => {
                                     rows="3"
                                     value={form.question_text}
                                     onChange={handleChange}
-                                    className="w-full rounded-md border border-gray-300 p-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    className="input"
                                 />
                                 {errors.question_text ? (
                                     <p className="mt-1 text-sm text-red-500">
@@ -610,7 +573,7 @@ const QuizCategory = () => {
                                     name="question_image_file"
                                     accept=".jpg,.jpeg,.png,.webp,.gif"
                                     onChange={handleChange}
-                                    className="w-full rounded-md border border-gray-300 p-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    className="input"
                                 />
                                 {form.question_image_file ? (
                                     <p className="mt-2 text-sm text-gray-500">
@@ -644,7 +607,7 @@ const QuizCategory = () => {
                                     name="choice1_text"
                                     value={form.choice1_text}
                                     onChange={handleChange}
-                                    className="w-full rounded-md border border-gray-300 p-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    className="input"
                                 />
                                 {errors.choice1_text ? (
                                     <p className="mt-1 text-sm text-red-500">
@@ -660,7 +623,7 @@ const QuizCategory = () => {
                                     name="choice2_text"
                                     value={form.choice2_text}
                                     onChange={handleChange}
-                                    className="w-full rounded-md border border-gray-300 p-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    className="input"
                                 />
                                 {errors.choice2_text ? (
                                     <p className="mt-1 text-sm text-red-500">
@@ -676,7 +639,7 @@ const QuizCategory = () => {
                                     name="choice3_text"
                                     value={form.choice3_text}
                                     onChange={handleChange}
-                                    className="w-full rounded-md border border-gray-300 p-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    className="input"
                                 />
                                 {errors.choice3_text ? (
                                     <p className="mt-1 text-sm text-red-500">
@@ -692,7 +655,7 @@ const QuizCategory = () => {
                                     name="choice4_text"
                                     value={form.choice4_text}
                                     onChange={handleChange}
-                                    className="w-full rounded-md border border-gray-300 p-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    className="input"
                                 />
                                 {errors.choice4_text ? (
                                     <p className="mt-1 text-sm text-red-500">
@@ -712,7 +675,7 @@ const QuizCategory = () => {
                                     name="level_of_difficulty"
                                     value={form.level_of_difficulty}
                                     onChange={handleChange}
-                                    className="w-full rounded-md border border-gray-300 p-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    className="input"
                                 />
                                 {errors.level_of_difficulty ? (
                                     <p className="mt-1 text-sm text-red-500">
@@ -729,7 +692,7 @@ const QuizCategory = () => {
                                     name="answer_key"
                                     value={form.answer_key}
                                     onChange={handleChange}
-                                    className="w-full rounded-md border border-gray-300 p-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    className="input"
                                 >
                                     {answerOptions.map((option) => (
                                         <option
@@ -752,14 +715,14 @@ const QuizCategory = () => {
                             <button
                                 type="button"
                                 onClick={closeModal}
-                                className="rounded-lg border border-gray-300 px-5 py-2 text-sm font-medium text-gray-700"
+                                className="btn-secondary"
                             >
                                 Cancel
                             </button>
                             <button
                                 type="submit"
                                 disabled={submitting}
-                                className="rounded-lg bg-blue-600 px-5 py-2 text-sm font-medium text-white transition hover:bg-blue-700 disabled:bg-blue-300"
+                                className="btn-primary"
                             >
                                 {submitting
                                     ? "Saving..."
@@ -771,6 +734,23 @@ const QuizCategory = () => {
                     </div>
                 </form>
             </Modal>
+
+            <ConfirmDialog
+                open={Boolean(pendingDelete)}
+                title="Delete quiz question"
+                message={
+                    pendingDelete
+                        ? `Delete quiz question #${pendingDelete.id}?`
+                        : null
+                }
+                confirmLabel="Delete"
+                onConfirm={() => {
+                    if (pendingDelete) {
+                        handleDelete(pendingDelete);
+                    }
+                }}
+                onCancel={() => setPendingDelete(null)}
+            />
         </>
     );
 };

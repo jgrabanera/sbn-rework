@@ -34,17 +34,14 @@ const cardAnimations = {
 function DashboardCard({ section, count }) {
     return (
         <Link href={section.route} className="group block h-full">
-            <article className="flex h-full flex-col rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-xl">
+            <article className="flex h-full flex-col rounded-card border border-slate-200 bg-white p-5 shadow-card transition duration-300 hover:-translate-y-1 hover:shadow-card-hover">
                 <div className="flex items-start justify-between gap-4">
                     <div>
-                        <p className="text-xs font-semibold uppercase tracking-[0.24em] text-teal-600">
-                            CMS Section
-                        </p>
-                        <h2 className="mt-2 text-xl font-semibold text-slate-900">
+                        <h2 className="mt-2 text-lg font-semibold text-slate-900">
                             {section.title}
                         </h2>
                     </div>
-                    <div className="rounded-xl bg-emerald-50 px-3 py-1 text-sm font-semibold text-emerald-700">
+                    <div className="rounded-full bg-accent-50 px-3 py-1 text-sm font-semibold text-accent-700">
                         {count}
                     </div>
                 </div>
@@ -54,7 +51,7 @@ function DashboardCard({ section, count }) {
                         animationData={cardAnimations[section.key]}
                         loop={true}
                         autoplay={true}
-                        style={{ width: 140, height: 140 }}
+                        style={{ width: 120, height: 120 }}
                     />
                 </div>
 
@@ -90,9 +87,7 @@ export default function Dashboard() {
                     : [];
 
                 setCounts(
-                    Object.fromEntries(
-                        sections.map((s) => [s.key, s.count]),
-                    ),
+                    Object.fromEntries(sections.map((s) => [s.key, s.count])),
                 );
                 setTotals(response.data?.totals ?? totals);
                 setFailed(false);
@@ -118,10 +113,10 @@ export default function Dashboard() {
         <>
             <Head title="Dashboard" />
 
-            <div className="max-h-screen bg-slate-100">
-                <div className="mx-auto w-full max-w-full px-4 py-6 md:px-8">
-                    <section className="rounded-xl bg-gradient-to-r from-teal-800 via-teal-700 to-emerald-600 p-6 text-white shadow-xl">
-                        <p className="text-xs font-semibold uppercase tracking-[0.28em] text-emerald-100">
+            <div className="cms-shell">
+                <div className="cms-container">
+                    {/* <section className="overflow-hidden rounded-card bg-gradient-to-r from-brand-800 via-brand-700 to-accent-600 p-6 text-white shadow-xl">
+                        <p className="text-xs font-semibold uppercase tracking-[0.28em] text-accent-100">
                             Admin Control Center
                         </p>
 
@@ -136,19 +131,19 @@ export default function Dashboard() {
                         )}
 
                         <div className="mt-6 grid gap-4 md:grid-cols-3">
-                            <div className="rounded-xl bg-white/10 py-2 px-4 backdrop-blur-sm">
-                                <p className="text-sm text-emerald-50/80">
+                            <div className="rounded-control bg-white/10 px-4 py-3 backdrop-blur-sm">
+                                <p className="text-sm text-accent-50/80">
                                     Sections
                                 </p>
-                                <p className="mt-2 text-3xl font-semibold">
+                                <p className="mt-1 text-3xl font-semibold">
                                     {totals.sections}
                                 </p>
                             </div>
-                            <div className="rounded-xl bg-white/10 py-2 px-4 backdrop-blur-sm">
-                                <p className="text-sm text-emerald-50/80">
+                            <div className="rounded-control bg-white/10 px-4 py-3 backdrop-blur-sm">
+                                <p className="text-sm text-accent-50/80">
                                     Tracked records
                                 </p>
-                                <p className="mt-2 text-3xl font-semibold">
+                                <p className="mt-1 text-3xl font-semibold">
                                     {loading
                                         ? "..."
                                         : failed
@@ -156,26 +151,24 @@ export default function Dashboard() {
                                           : totals.records}
                                 </p>
                             </div>
-                            <div className="rounded-xl bg-white/10 py-2 px-4 backdrop-blur-sm">
-                                <p className="text-sm text-emerald-50/80">
+                            <div className="rounded-control bg-white/10 px-4 py-3 backdrop-blur-sm">
+                                <p className="text-sm text-accent-50/80">
                                     Admin entry
                                 </p>
-                                <p className="mt-2 text-lg font-semibold">
+                                <p className="mt-1 text-lg font-semibold">
                                     /admin
                                 </p>
                             </div>
                         </div>
-                    </section>
+                    </section> */}
 
-                    <section className="mt-6 grid gap-4 md:grid-cols-4 lg:grid-cols-5">
+                    <section className=" grid gap-4 md:grid-cols-4 lg:grid-cols-5">
                         {fallbackSections.map((section) => (
                             <DashboardCard
                                 key={section.key}
                                 section={section}
                                 count={
-                                    loading
-                                        ? "-"
-                                        : (counts[section.key] ?? "-")
+                                    loading ? "-" : (counts[section.key] ?? "-")
                                 }
                             />
                         ))}

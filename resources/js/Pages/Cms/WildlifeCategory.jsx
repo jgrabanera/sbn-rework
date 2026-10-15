@@ -24,8 +24,8 @@ import {
     PictureEditing,
     Base64UploadAdapter,
 } from "ckeditor5";
-import { MdDeleteForever } from "react-icons/md";
-import { AiOutlineEdit } from "react-icons/ai";
+import ConfirmDialog from "@/Components/ConfirmDialog";
+import RowActions from "@/Components/RowActions";
 import { FaPlusCircle } from "react-icons/fa";
 import axios from "axios";
 
@@ -126,6 +126,7 @@ const WildlifeCategory = () => {
     const [modalOpen, setModalOpen] = useState(false);
     const [submitting, setSubmitting] = useState(false);
     const [editingRecord, setEditingRecord] = useState(null);
+    const [pendingDelete, setPendingDelete] = useState(null);
     const [form, setForm] = useState(emptyForm);
     const [errors, setErrors] = useState({});
     const [successMessage, setSuccessMessage] = useState("");
@@ -138,6 +139,7 @@ const WildlifeCategory = () => {
                 params: { page, search: keyword, per_page: 10 },
             });
             setRecords(res.data);
+            setPendingDelete(null);
         } catch (error) {
             console.error("Error loading wildlife items:", error);
         } finally {
@@ -311,15 +313,11 @@ const WildlifeCategory = () => {
         }
     };
 
+    const requestDelete = (record) => {
+        setPendingDelete(record);
+    };
+
     const handleDelete = async (record) => {
-        const confirmed = window.confirm(
-            `Delete "${record.areaName} / ${record.tab_name}"?`,
-        );
-
-        if (!confirmed) {
-            return;
-        }
-
         try {
             await axios.delete(`/deleteWildlifeItem/${record.id}`);
 
@@ -366,23 +364,23 @@ const WildlifeCategory = () => {
         <>
             <Head title="Wildlife Category" />
             {successMessage ? (
-                <div className="fixed left-1/2 top-6 z-[80] w-[calc(100%-2rem)] max-w-xl -translate-x-1/2">
+                <div className="pointer-events-auto fixed left-1/2 top-5 z-[70] w-[calc(100%-2rem)] max-w-md -translate-x-1/2">
                     <div
                         role="status"
-                        className="rounded-2xl border-4 border-emerald-200 bg-emerald-600 px-6 py-4 text-center text-base font-bold text-white shadow-2xl"
+                        className="rounded-control border border-accent-200 bg-accent-50 px-4 py-3 text-sm font-semibold text-accent-700 shadow-lg"
                     >
                         {successMessage}
                     </div>
                 </div>
             ) : null}
-            <div className="min-h-screen flex flex-col items-center justify-start">
-                <div className="w-full md:px-8 px-4 py-6">
-                    <div className="flex flex-col gap-3 md:flex-row justify-between items-center bg-white shadow-sm rounded-md md:p-6 p-4 mb-4 border border-gray-200">
+            <div className="cms-shell">
+                <div className="cms-container">
+                    <div className="cms-card mb-5 flex flex-col gap-4 p-5 md:flex-row md:items-start md:justify-between md:p-6">
                         <div>
-                            <h3 className="text-lg md:text-xl font-semibold text-gray-800">
+                            <h3 className="cms-page-title">
                                 Wildlife Category
                             </h3>
-                            <p className="text-sm text-gray-500 mt-1">
+                            <p className="cms-page-description">
                                 Manage wildlife tabs, thumbnails, and main
                                 habitat content for each protected area.
                             </p>
@@ -396,7 +394,7 @@ const WildlifeCategory = () => {
                                     setSearchInput(e.target.value)
                                 }
                                 placeholder="Search by area, tab, or content..."
-                                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-400 focus:outline-none"
+                                className="input"
                             />
                             <p className="mt-2 text-sm text-gray-500">
                                 {pageSummary}
@@ -410,31 +408,31 @@ const WildlifeCategory = () => {
                                 type="button"
                                 onClick={openCreateModal}
                                 disabled={lookupLoading}
-                                className="md:max-w-44 md:w-full w-full h-12 bg-green-600 hover:bg-green-700 disabled:bg-green-300 border-2 text-white border-gray-200 rounded-xl py-2 font-bold flex flex-row justify-center items-center gap-3"
+                                className="btn-accent"
                             >
                                 <FaPlusCircle size={18} />
                                 Add Wildlife
                             </button>
                         </div>
 
-                        <div className="bg-white rounded-md border border-gray-100 overflow-x-auto">
+                        <div className="table-shell table-scroll">
                             <div className="w-full">
-                                <table className="table-auto border-collapse w-full text-left min-w-full hidden md:table rounded-lg overflow-hidden shadow-lg">
+                                <table className="table hidden md:table">
                                     <thead>
-                                        <tr className="bg-teal-600 text-white text-center">
-                                            <th className="border border-gray-300 px-4 py-2 text-sm">
+                                        <tr>
+                                            <th>
                                                 Area Name
                                             </th>
-                                            <th className="border border-gray-300 px-4 py-2 text-sm">
+                                            <th>
                                                 Tab Name
                                             </th>
-                                            <th className="border border-gray-300 px-4 py-2 text-sm">
+                                            <th>
                                                 Thumbnail
                                             </th>
-                                            <th className="border border-gray-300 px-4 py-2 text-sm">
+                                            <th>
                                                 Content
                                             </th>
-                                            <th className="border border-gray-300 px-4 py-2 text-sm">
+                                            <th>
                                                 Action
                                             </th>
                                         </tr>
@@ -445,15 +443,15 @@ const WildlifeCategory = () => {
                                             records.data.map((record) => (
                                                 <tr
                                                     key={record.id}
-                                                    className="rounded p-4 shadow bg-white text-center"
+                                                    
                                                 >
-                                                    <td className="border border-gray-200 px-4 py-2 text-sm">
+                                                    <td>
                                                         {record.areaName ?? "-"}
                                                     </td>
-                                                    <td className="border border-gray-200 px-4 py-2 text-sm">
+                                                    <td>
                                                         {record.tab_name ?? "-"}
                                                     </td>
-                                                    <td className="border border-gray-200 px-4 py-2 text-sm">
+                                                    <td>
                                                         {record.thumbnail_url ? (
                                                             <img
                                                                 src={`/storage/images/${record.thumbnail_url}`}
@@ -470,38 +468,22 @@ const WildlifeCategory = () => {
                                                             180,
                                                         )}
                                                     </td>
-                                                    <td className="border border-gray-200 px-4 py-2 text-sm">
-                                                        <div className="flex justify-center items-center gap-1">
-                                                            <button
-                                                                type="button"
-                                                                onClick={() =>
-                                                                    openEditModal(
-                                                                        record,
-                                                                    )
-                                                                }
-                                                            >
-                                                                <AiOutlineEdit
-                                                                    color="#00ABFF"
-                                                                    size={24}
-                                                                    className="cursor-pointer"
-                                                                />
-                                                            </button>
-                                                            <button
-                                                                type="button"
-                                                                onClick={() =>
-                                                                    handleDelete(
-                                                                        record,
-                                                                    )
-                                                                }
-                                                            >
-                                                                <MdDeleteForever
-                                                                    color="#E63B60"
-                                                                    size={24}
-                                                                    className="cursor-pointer"
-                                                                />
-                                                            </button>
-                                                        </div>
-                                                    </td>
+                                                    <td>
+                                                        <RowActions
+                                        variant="icon"
+                                        itemLabel="wildlife item"
+                                        showDelete={true}
+                                        onEdit={() =>
+                                            openEditModal(
+                                                record,
+                                            )
+                                        }
+                                        onDelete={() =>
+                                            requestDelete(
+                                                record,
+                                            )
+                                        }
+                                    /></td>
                                                 </tr>
                                             ))
                                         ) : (
@@ -519,12 +501,12 @@ const WildlifeCategory = () => {
                                     </tbody>
                                 </table>
 
-                                <div className="md:hidden space-y-4 overflow-auto max-h-85 p-2">
+                                <div className="md:hidden space-y-4 overflow-auto max-h-[21rem] p-2">
                                     {records?.data?.length > 0 ? (
                                         records.data.map((item) => (
                                             <div
                                                 key={item.id}
-                                                className="border rounded p-4 shadow mb-2 bg-white"
+                                                className="mb-2 rounded-card border border-slate-200 bg-white p-4 shadow-card"
                                             >
                                                 <p className="text-sm">
                                                     <span className="font-semibold">
@@ -561,32 +543,17 @@ const WildlifeCategory = () => {
                                                     )}
                                                 </p>
 
-                                                <div className="mt-4 flex items-center gap-3">
-                                                    <button
-                                                        type="button"
-                                                        onClick={() =>
-                                                            openEditModal(item)
-                                                        }
-                                                        className="flex items-center gap-2 text-sky-600"
-                                                    >
-                                                        <AiOutlineEdit
-                                                            size={18}
-                                                        />
-                                                        Edit
-                                                    </button>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() =>
-                                                            handleDelete(item)
-                                                        }
-                                                        className="flex items-center gap-2 text-red-500"
-                                                    >
-                                                        <MdDeleteForever
-                                                            size={18}
-                                                        />
-                                                        Delete
-                                                    </button>
-                                                </div>
+                                                <RowActions
+                                        variant="labelled"
+                                        itemLabel="wildlife item"
+                                        showDelete={true}
+                                        onEdit={() =>
+                                            openEditModal(item)
+                                        }
+                                        onDelete={() =>
+                                            requestDelete(item)
+                                        }
+                                    />
                                             </div>
                                         ))
                                     ) : (
@@ -668,7 +635,7 @@ const WildlifeCategory = () => {
                                     name="area_id"
                                     value={form.area_id}
                                     onChange={handleChange}
-                                    className="w-full border border-gray-300 rounded-md p-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                                    className="input"
                                 >
                                     <option value="">Select area</option>
                                     {areas.map((area) => (
@@ -692,7 +659,7 @@ const WildlifeCategory = () => {
                                     name="tab_name"
                                     value={form.tab_name}
                                     onChange={handleChange}
-                                    className="w-full border border-gray-300 rounded-md p-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                                    className="input"
                                     disabled={!form.area_id}
                                 >
                                     <option value="">
@@ -781,14 +748,14 @@ const WildlifeCategory = () => {
                             <button
                                 type="button"
                                 onClick={closeModal}
-                                className="px-6 py-2 border border-gray-300 text-gray-700 font-medium rounded-lg"
+                                className="btn-secondary"
                             >
                                 Cancel
                             </button>
                             <button
                                 type="submit"
                                 disabled={submitting}
-                                className="px-6 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 disabled:bg-blue-300 transition"
+                                className="btn-primary"
                             >
                                 {submitting
                                     ? "Saving..."
@@ -800,6 +767,23 @@ const WildlifeCategory = () => {
                     </div>
                 </form>
             </Modal>
+
+            <ConfirmDialog
+                open={Boolean(pendingDelete)}
+                title="Delete wildlife item"
+                message={
+                    pendingDelete
+                        ? `Delete "${record.areaName} / ${record.tab_name}"?`
+                        : null
+                }
+                confirmLabel="Delete"
+                onConfirm={() => {
+                    if (pendingDelete) {
+                        handleDelete(pendingDelete);
+                    }
+                }}
+                onCancel={() => setPendingDelete(null)}
+            />
         </>
     );
 };
